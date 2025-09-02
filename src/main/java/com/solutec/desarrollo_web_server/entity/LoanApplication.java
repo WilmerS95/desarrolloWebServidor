@@ -15,14 +15,14 @@ public class LoanApplication {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "loanApplicationID")
-    private Integer loanApplicationID;
+    private Long loanApplicationID;
 
     @ManyToOne
     @JoinColumn(name = "userID")
     private User user;
 
     @Column(name = "itemID")
-    private Integer itemID;
+    private Long itemID;
 
     @Column(name = "quantityPayments")
     private Integer quantityPayments;

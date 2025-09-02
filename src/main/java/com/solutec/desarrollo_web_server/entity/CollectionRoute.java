@@ -15,7 +15,7 @@ public class CollectionRoute {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "routeId")
-    private Integer routeId;
+    private Long routeId;
 
     @ManyToOne
     @JoinColumn(name = "collectorID")

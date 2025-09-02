@@ -15,7 +15,7 @@ public class DebtRecovery {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "recoveryID")
-    private Integer recoveryID;
+    private Long recoveryID;
 
     @ManyToOne
     @JoinColumn(name = "loanID")

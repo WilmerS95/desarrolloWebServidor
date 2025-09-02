@@ -15,7 +15,7 @@ public class ProcessStatus {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "processStatusID")
-    private Integer processStatusID;
+    private Long processStatusID;
 
     @ManyToOne
     @JoinColumn(name = "currentStateID")
@@ -25,7 +25,7 @@ public class ProcessStatus {
     private String entityType;
 
     @Column(name = "entityID")
-    private Integer entityID;
+    private Long entityID;
 
     @Column(name = "lastUpdated")
     private LocalDateTime lastUpdated;

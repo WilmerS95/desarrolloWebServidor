@@ -15,7 +15,7 @@ public class Task {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "taskId")
-    private Integer taskId;
+    private Long taskId;
 
     @ManyToOne
     @JoinColumn(name = "assignedTo")
@@ -34,7 +34,7 @@ public class Task {
     private String status;
 
     @Column(name = "relatedEntityID")
-    private Integer relatedEntityID;
+    private Long relatedEntityID;
 
     @Column(name = "entityType")
     private String entityType;

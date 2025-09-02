@@ -15,10 +15,10 @@ public class Document {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "DocumentId")
-    private Integer documentId;
+    private Long documentId;
 
     @Column(name = "entityID")
-    private Integer entityID;
+    private Long entityID;
 
     @Column(name = "entityType")
     private String entityType;

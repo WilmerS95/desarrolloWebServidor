@@ -13,7 +13,7 @@ public class Item {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "itemID")
-    private Integer itemID;
+    private Long itemID;
 
     @ManyToOne
     @JoinColumn(name = "categoryId")

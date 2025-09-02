@@ -15,7 +15,7 @@ public class BusinessParameter {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "parameterId")
-    private Integer parameterId;
+    private Long parameterId;
 
     @Column(name = "name")
     private String name;

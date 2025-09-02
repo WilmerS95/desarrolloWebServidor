@@ -15,7 +15,7 @@ public class AuditLog {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "auditID")
-    private Integer auditID;
+    private Long auditID;
 
     @ManyToOne
     @JoinColumn(name = "changedBy")
@@ -25,7 +25,7 @@ public class AuditLog {
     private String entityType;
 
     @Column(name = "entityID")
-    private Integer entityID;
+    private Long entityID;
 
     @Column(name = "action")
     private String action;

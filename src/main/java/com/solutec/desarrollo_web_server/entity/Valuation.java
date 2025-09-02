@@ -16,14 +16,14 @@ public class Valuation {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "valuationID")
-    private Integer valuationID;
+    private Long valuationID;
 
     @ManyToOne
     @JoinColumn(name = "loanApplicationID")
     private LoanApplication loanApplication;
 
     @Column(name = "appraiserID")
-    private Integer appraiserID;
+    private Long appraiserID;
 
     @Column(name = "valuationDate")
     private LocalDateTime valuationDate;

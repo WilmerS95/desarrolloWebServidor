@@ -5,8 +5,8 @@ import java.util.Objects;
 
 public class RolePermissionId implements Serializable {
 
-    private Integer permission;
-    private Integer role;
+    private Long permission;
+    private Long role;
 
     @Override
     public boolean equals(Object o) {

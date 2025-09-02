@@ -15,7 +15,7 @@ public class ElectronicSignature {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "signatureID")
-    private Integer signatureID;
+    private Long signatureID;
 
     @ManyToOne
     @JoinColumn(name = "documentID")

@@ -13,7 +13,7 @@ public class RouteAssignment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "assignmentID")
-    private Integer assignmentID;
+    private Long assignmentID;
 
     @ManyToOne
     @JoinColumn(name = "routeId")

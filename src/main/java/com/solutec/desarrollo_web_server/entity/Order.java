@@ -16,7 +16,7 @@ public class Order {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "orderID")
-    private Integer orderID;
+    private Long orderID;
 
     @ManyToOne
     @JoinColumn(name = "userID")

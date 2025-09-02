@@ -15,7 +15,7 @@ public class ProcessTransition {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "transitionID")
-    private Integer transitionID;
+    private Long transitionID;
 
     @ManyToOne
     @JoinColumn(name = "fromStateID")

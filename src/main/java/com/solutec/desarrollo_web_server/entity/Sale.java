@@ -16,7 +16,7 @@ public class Sale {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "saleID")
-    private Integer saleID;
+    private Long saleID;
 
     @ManyToOne
     @JoinColumn(name = "unredeemedItemID")

@@ -16,7 +16,7 @@ public class StorageCost {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "storageCostID")
-    private Integer storageCostID;
+    private Long storageCostID;
 
     @ManyToOne
     @JoinColumn(name = "itemID")

@@ -16,7 +16,7 @@ public class UnredeemedItem {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "unredeemedItemID")
-    private Integer unredeemedItemID;
+    private Long unredeemedItemID;
 
     @ManyToOne
     @JoinColumn(name = "loanID")

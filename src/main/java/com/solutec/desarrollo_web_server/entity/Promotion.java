@@ -16,10 +16,10 @@ public class Promotion {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "promotionID")
-    private Integer promotionID;
+    private Long promotionID;
 
     @Column(name = "itemId")
-    private Integer itemId;
+    private Long itemId;
 
     @Column(name = "discountPercentage")
     private BigDecimal discountPercentage;

@@ -15,7 +15,7 @@ public class ProcessState {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "processStateID")
-    private Integer processStateID;
+    private Long processStateID;
 
     @Column(name = "stateName")
     private String stateName;
