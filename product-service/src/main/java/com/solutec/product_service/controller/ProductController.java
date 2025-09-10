@@ -4,6 +4,7 @@ import com.solutec.product_service.model.Product;
 import com.solutec.product_service.service.ProductService;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.List;
 
 @RestController
@@ -16,7 +17,7 @@ public class ProductController {
     }
 
     @GetMapping
-    public List<Product> getProducts() {
+    public List<Product> getAllProducts() {
         return service.getAllProducts();
     }
 
