@@ -1,25 +1,14 @@
 server:
-  port: 8083
-
+  port: 8084
 spring:
-  application:
-    name: product-service
-
-  datasource:
-    url: jdbc:h2:mem:productsdb
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-  jpa:
-    hibernate:
-      ddl-auto: create
-    show-sql: true
-
   security:
     oauth2:
       resourceserver:
         jwt:
           issuer-uri: http://localhost:9000
+
+  application:
+    name: auth-service
 
 eureka:
   client:

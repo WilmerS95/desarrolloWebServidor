@@ -4,11 +4,10 @@ import com.solutec.product_service.model.Product;
 import com.solutec.product_service.service.ProductService;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Arrays;
 import java.util.List;
 
 @RestController
-@RequestMapping("/products")
+@RequestMapping
 public class ProductController {
     private final ProductService service;
 
@@ -16,12 +15,17 @@ public class ProductController {
         this.service = service;
     }
 
-    @GetMapping
+    @GetMapping("/public/hello")
+    public String publicHello() {
+        return "Hola, este endpoint es público";
+    }
+
+    @GetMapping("/products")
     public List<Product> getAllProducts() {
         return service.getAllProducts();
     }
 
-    @PostMapping
+    @PostMapping("/products")
     public Product createProduct(@RequestBody Product product) {
         return service.saveProduct(product);
     }
