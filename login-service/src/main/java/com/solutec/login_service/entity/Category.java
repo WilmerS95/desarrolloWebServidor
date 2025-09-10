@@ -1,3 +1,4 @@
+/*
 package com.solutec.login_service.entity;
 
 import jakarta.persistence.*;
@@ -23,4 +24,4 @@ public class Category {
 
     @Column(name = "percentage")
     private Float percentage;
-}
+}*/

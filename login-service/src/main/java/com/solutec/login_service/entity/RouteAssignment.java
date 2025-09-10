@@ -1,3 +1,4 @@
+/*
 package com.solutec.login_service.entity;
 
 import jakarta.persistence.*;
@@ -22,4 +23,4 @@ public class RouteAssignment {
     @ManyToOne
     @JoinColumn(name = "loanId")
     private Loan loan;
-}
+}*/

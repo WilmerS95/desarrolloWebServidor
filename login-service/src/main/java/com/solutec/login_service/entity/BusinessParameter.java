@@ -1,3 +1,4 @@
+/*
 package com.solutec.login_service.entity;
 
 import jakarta.persistence.*;
@@ -31,4 +32,4 @@ public class BusinessParameter {
 
     @Column(name = "changedBy")
     private String changedBy;
-}
+}*/

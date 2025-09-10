@@ -1,3 +1,4 @@
+/*
 package com.solutec.login_service.entity;
 
 import jakarta.persistence.*;
@@ -32,4 +33,4 @@ public class Notification {
 
     @Column(name = "type")
     private String type;
-}
+}*/

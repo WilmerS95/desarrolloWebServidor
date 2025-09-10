@@ -1,3 +1,4 @@
+/*
 package com.solutec.login_service.entity;
 
 import jakarta.persistence.*;
@@ -30,4 +31,4 @@ public class ProcessTransition {
 
     @Column(name = "comment")
     private String comment;
-}
+}*/

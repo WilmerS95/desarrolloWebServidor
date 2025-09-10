@@ -1,3 +1,4 @@
+/*
 package com.solutec.login_service.entity;
 
 import jakarta.persistence.*;
@@ -38,4 +39,4 @@ public class Task {
 
     @Column(name = "entityType")
     private String entityType;
-}
+}*/

@@ -1,3 +1,4 @@
+/*
 package com.solutec.login_service.entity;
 
 import jakarta.persistence.*;
@@ -27,4 +28,4 @@ public class Sale {
 
     @Column(name = "saleAmount")
     private BigDecimal saleAmount;
-}
+}*/

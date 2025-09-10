@@ -1,3 +1,4 @@
+/*
 package com.solutec.login_service.entity;
 
 import jakarta.persistence.*;
@@ -17,4 +18,4 @@ public class Permission {
 
     @Column(name = "permissionName")
     private String permissionName;
-}
+}*/

@@ -1,3 +1,4 @@
+/*
 package com.solutec.login_service.controller;
 
 import com.solutec.desarrollo_web_server.entity.LoginRequest;
@@ -17,4 +18,4 @@ public class AuthController {
         boolean success = authService.login(request.getUsername(), request.getPassword());
         return success ? "Login exitoso" : "Credenciales incorrectas";
     }
-}
+}*/

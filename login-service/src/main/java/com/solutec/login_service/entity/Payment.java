@@ -1,3 +1,4 @@
+/*
 package com.solutec.login_service.entity;
 
 import jakarta.persistence.*;
@@ -36,4 +37,4 @@ public class Payment {
 
     @Column(name = "paymentMethod")
     private String paymentMethod;
-}
+}*/

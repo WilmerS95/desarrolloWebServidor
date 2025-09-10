@@ -1,3 +1,4 @@
+/*
 package com.solutec.login_service.entity;
 
 import jakarta.persistence.*;
@@ -49,3 +50,4 @@ public class User {
     @JoinColumn(name = "roleId", nullable = false)
     private Role role;
 }
+*/

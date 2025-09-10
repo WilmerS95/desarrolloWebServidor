@@ -1,3 +1,4 @@
+/*
 package com.solutec.login_service.entity;
 
 import jakarta.persistence.*;
@@ -29,4 +30,4 @@ public class ProcessStatus {
 
     @Column(name = "lastUpdated")
     private LocalDateTime lastUpdated;
-}
+}*/

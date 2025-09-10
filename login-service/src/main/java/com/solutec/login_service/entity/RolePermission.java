@@ -1,3 +1,4 @@
+/*
 package com.solutec.login_service.entity;
 
 import jakarta.persistence.*;
@@ -20,4 +21,4 @@ public class RolePermission {
     @ManyToOne
     @JoinColumn(name = "roleId")
     private Role role;
-}
+}*/

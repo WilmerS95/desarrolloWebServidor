@@ -1,3 +1,4 @@
+/*
 package com.solutec.login_service.service;
 
 import com.solutec.desarrollo_web_server.entity.User;
@@ -16,4 +17,4 @@ public class AuthService {
                 .map(user -> user.getPassword().equals(password))
                 .orElse(false);
     }
-}
+}*/

@@ -1,3 +1,4 @@
+/*
 package com.solutec.login_service.entity;
 
 import jakarta.persistence.*;
@@ -38,4 +39,4 @@ public class AuditLog {
 
     @Column(name = "changeDate")
     private LocalDateTime changeDate;
-}
+}*/
