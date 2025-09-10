@@ -1,5 +1,4 @@
-/*
-package com.solutec.login_service.entity;
+package com.solutec.auth_service.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -19,4 +18,3 @@ public class Role {
     @Column(name = "roleName")
     private String roleName;
 }
-*/

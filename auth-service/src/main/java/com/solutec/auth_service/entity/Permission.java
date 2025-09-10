@@ -1,5 +1,4 @@
-/*
-package com.solutec.login_service.entity;
+package com.solutec.auth_service.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -18,4 +17,4 @@ public class Permission {
 
     @Column(name = "permissionName")
     private String permissionName;
-}*/
+}

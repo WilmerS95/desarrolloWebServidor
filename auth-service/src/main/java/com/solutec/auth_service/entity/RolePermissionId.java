@@ -1,4 +1,4 @@
-package com.solutec.login_service.entity;
+package com.solutec.auth_service.entity;
 
 import java.io.Serializable;
 import java.util.Objects;

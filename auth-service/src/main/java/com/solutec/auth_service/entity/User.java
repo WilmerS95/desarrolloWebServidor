@@ -1,5 +1,4 @@
-/*
-package com.solutec.login_service.entity;
+package com.solutec.auth_service.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -31,8 +30,8 @@ public class User {
     @Column(name = "secondOrMoreNames")
     private String secondOrMoreNames;
 
-    @Column(name = "lastName", nullable = false)
-    private String lastName;
+    @Column(name = "firstLastName", nullable = false)
+    private String firstLastName;
 
     @Column(name = "secondLastName")
     private String secondLastName;
@@ -47,7 +46,6 @@ public class User {
     private String address;
 
     @ManyToOne
-    @JoinColumn(name = "roleId", nullable = false)
+    @JoinColumn(name = "roleId", referencedColumnName = "roleId", nullable = false)
     private Role role;
 }
-*/
