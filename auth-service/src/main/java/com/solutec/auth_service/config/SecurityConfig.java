@@ -23,8 +23,8 @@ import java.util.List;
 @Configuration
 public class SecurityConfig {
 
-    private final String baseUrl = "http://192.168.1.33:4200";
-    //private String baseUrl = "http://localhost:4200";
+    //private final String baseUrl = "http://192.168.1.33:4200";
+    private String baseUrl = "http://localhost:4200";
 
     @Autowired
     private JwtAuthFilter jwtAuthFilter;
