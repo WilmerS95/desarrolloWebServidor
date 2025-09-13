@@ -50,6 +50,8 @@ public class UserService {
     }
 
     public String createPasswordResetToken(User user) {
+        tokenRepository.findByUser(user).ifPresent(tokenRepository::delete);
+
         String token = java.util.UUID.randomUUID().toString();
 
         PasswordResetToken prt = new PasswordResetToken();

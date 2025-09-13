@@ -101,4 +101,19 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al enviar correo");
         }
     }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> request) {
+        String token = request.get("token");
+        String newPassword = request.get("newPassword");
+
+        boolean result = userService.resetPassword(token, newPassword);
+
+        if (result) {
+            return ResponseEntity.ok(Map.of("message", "Contraseña actualizada correctamente"));
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Token inválido o expirado"));
+        }
+    }
 }
