@@ -1,6 +1,20 @@
 server:
   port: 9000
 spring:
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: solutec4513@gmail.com
+    password: yvmf kiaa gyii hbkm
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+    default-encoding: UTF-8
+
   security:
     oauth2:
       resourceserver:

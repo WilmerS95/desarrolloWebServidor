@@ -23,6 +23,9 @@ import java.util.List;
 @Configuration
 public class SecurityConfig {
 
+    private final String baseUrl = "http://192.168.1.33:4200";
+    //private String baseUrl = "http://localhost:4200";
+
     @Autowired
     private JwtAuthFilter jwtAuthFilter;
 
@@ -33,6 +36,7 @@ public class SecurityConfig {
                 new OAuth2AuthorizationServerConfigurer();
 
         http
+                .csrf(csrf -> csrf.disable())
                 .securityMatcher("/oauth2/**")
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .with(authorizationServerConfigurer, (authorizationServer) -> {})
@@ -62,7 +66,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:4200"));
+        configuration.setAllowedOrigins(List.of(baseUrl));
         configuration.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

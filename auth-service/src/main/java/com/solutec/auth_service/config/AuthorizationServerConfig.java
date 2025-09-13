@@ -18,7 +18,7 @@ public class AuthorizationServerConfig {
                 .clientId("product-service")
                 .clientSecret("secret123")
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
-                .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS) // token de cliente
+                .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
                 .scope("product.read")
                 .scope("product.write")
                 .build();
