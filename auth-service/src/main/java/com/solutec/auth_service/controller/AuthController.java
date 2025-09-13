@@ -15,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
@@ -53,7 +55,9 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<?> forgotPassword(@RequestParam String email) {
+    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+
         var userOptional = userService.findByEmail(email);
 
         if (userOptional.isEmpty()) {
@@ -61,7 +65,7 @@ public class AuthController {
         }
 
         String token = userService.createPasswordResetToken(userOptional.get());
-        String resetLink = "http://localhost:4200/reset-password?token=" + token;
+        String resetLink = "http://192.168.1.33:4200/reset-password?token=" + token;
 
         try {
             emailService.sendEmail(
