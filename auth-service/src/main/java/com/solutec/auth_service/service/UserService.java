@@ -24,6 +24,13 @@ public class UserService {
     }
 
     public UserResponse register(RegisterRequest request) {
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new RuntimeException("El usuario ya existe");
+        }
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new RuntimeException("El correo ya está registrado");
+        }
+
         Role defaultRole = roleRepository.findByRoleName("CLIENTE")
                 .orElseGet(() -> {
                     Role newRole = new Role();

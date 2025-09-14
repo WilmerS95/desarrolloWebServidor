@@ -1,9 +1,6 @@
 package com.solutec.auth_service.controller;
 
-import com.solutec.auth_service.entity.LoginRequest;
-import com.solutec.auth_service.entity.LoginResponse;
-import com.solutec.auth_service.entity.RegisterRequest;
-import com.solutec.auth_service.entity.UserResponse;
+import com.solutec.auth_service.entity.*;
 import com.solutec.auth_service.repository.UserRepository;
 import com.solutec.auth_service.service.EmailService;
 import com.solutec.auth_service.service.JwtService;
@@ -44,14 +41,24 @@ public class AuthController {
                         String token = jwtService.generateToken(user);
                         return ResponseEntity.ok(new LoginResponse(token));
                     } else {
-                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Contraseña incorrecta");
+                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Contraseña incorrecta"));
                     }
                 })
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no encontrado"));
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Usuario no encontrado")));
     }
     @PostMapping("/register")
-    public ResponseEntity<UserResponse> register(@RequestBody RegisterRequest request) {
-        return ResponseEntity.ok(userService.register(request));
+    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+        if (userRepository.existsByUsername(request.getUsername())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("field", "username", "message", "El usuario ya existe"));
+        }
+        if (userRepository.existsByEmail(request.getEmail())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("field", "email", "message", "El correo ya está registrado"));
+        }
+
+        userService.register(request);
+        return ResponseEntity.ok(Map.of("message", "Usuario creado correctamente"));
     }
 
     @PostMapping("/forgot-password")
@@ -61,7 +68,7 @@ public class AuthController {
         var userOptional = userService.findByEmail(email);
 
         if (userOptional.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Usuario no encontrado");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Correo no encontrado"));
         }
 
         String token = userService.createPasswordResetToken(userOptional.get());
@@ -74,9 +81,9 @@ public class AuthController {
                     "<p>Hola, para restablecer tu contraseña haz clic en el siguiente enlace:</p>" +
                             "<a href=\"" + resetLink + "\">Restablecer contraseña</a>"
             );
-            return ResponseEntity.ok("Correo de recuperación enviado");
+            return ResponseEntity.ok(Map.of("message", "Correo de recuperación enviado"));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al enviar correo");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "Error al enviar correo"));
         }
     }
 
