@@ -49,7 +49,7 @@ public class UserService {
         user.setMarriedLastName(request.getMarriedLastName());
         user.setTelephone(request.getTelephone());
         user.setAddress(request.getAddress());
-        user.setRole(defaultRole);
+        user.getRoles().add(defaultRole);
 
         User savedUser = userRepository.save(user);
 

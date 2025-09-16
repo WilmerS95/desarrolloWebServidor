@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.HashSet;
+import java.util.Set;
+
 @Setter
 @Getter
 @Entity
@@ -11,8 +14,8 @@ import lombok.Setter;
 public class User {
 
     @Id
-    @Column(name = "userID")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "userID")
     private Long userID;
 
     @Column(name = "username", nullable = false, unique = true)
@@ -45,7 +48,11 @@ public class User {
     @Column(name = "address")
     private String address;
 
-    @ManyToOne
-    @JoinColumn(name = "roleId", referencedColumnName = "roleId", nullable = false)
-    private Role role;
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "user_roles",
+            joinColumns = @JoinColumn(name = "userID"),
+            inverseJoinColumns = @JoinColumn(name = "roleId")
+    )
+    private Set<Role> roles = new HashSet<>();
 }

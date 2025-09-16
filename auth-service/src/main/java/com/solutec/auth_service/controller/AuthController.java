@@ -3,15 +3,18 @@ package com.solutec.auth_service.controller;
 import com.solutec.auth_service.entity.*;
 import com.solutec.auth_service.repository.UserRepository;
 import com.solutec.auth_service.service.EmailService;
-import com.solutec.auth_service.service.JwtService;
 import com.solutec.auth_service.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.util.Map;
 
 @RestController
@@ -27,8 +30,7 @@ public class AuthController {
     @Autowired
     private UserRepository userRepository;
 
-    @Autowired
-    private JwtService jwtService;
+    private final JwtEncoder jwtEncoder;
 
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
@@ -38,14 +40,30 @@ public class AuthController {
         return userRepository.findByUsername(loginRequest.getUsername())
                 .map(user -> {
                     if (passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
-                        String token = jwtService.generateToken(user);
+                        Instant now = Instant.now();
+                        long expiry = 3600L; // 1 hora
+
+                        JwtClaimsSet claims = JwtClaimsSet.builder()
+                                .issuer("auth-service")
+                                .issuedAt(Instant.now())
+                                .expiresAt(Instant.now().plusSeconds(3600))
+                                .subject(user.getUsername())
+                                .claim("roles", user.getRoles().stream().map(Role::getRoleName).toList())
+                                .build();
+
+                        String token = jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
+
                         return ResponseEntity.ok(new LoginResponse(token));
                     } else {
-                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Contraseña incorrecta"));
+                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                                .body(Map.of("message", "Contraseña incorrecta"));
                     }
                 })
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Usuario no encontrado")));
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "Usuario no encontrado")));
     }
+
+
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
@@ -72,14 +90,12 @@ public class AuthController {
         }
 
         String token = userService.createPasswordResetToken(userOptional.get());
-        String resetLink = "http://192.168.1.33:4200/reset-password?token=" + token;
 
         try {
             emailService.sendEmail(
                     email,
                     "Recuperar contraseña",
-                    "<p>Hola, para restablecer tu contraseña haz clic en el siguiente enlace:</p>" +
-                            "<a href=\"" + resetLink + "\">Restablecer contraseña</a>"
+                    getEmailContent(token)
             );
             return ResponseEntity.ok(Map.of("message", "Correo de recuperación enviado"));
         } catch (Exception e) {
@@ -87,27 +103,54 @@ public class AuthController {
         }
     }
 
-    @GetMapping("/test-email")
-    public ResponseEntity<?> testEmail() {
-        String email = "krodasa7@miumg.edu.gt";
-        //var userOptional = userService.findByEmail(email);
+    private static String getEmailContent(String token) {
+        String resetLink = "http://192.168.1.33:4200/reset-password?token=" + token;
 
-
-        //String token = userService.createPasswordResetToken(userOptional.get());
-        String resetLink = "http://localhost:4200/reset-password?token=" + "token";
-        try {
-            emailService.sendEmail(
-                    email,
-                    "Nueva Prueba",
-                    "<p>Hola, para restablecer tu contraseña haz clic en el siguiente enlace:</p>" +
-                            "<a href=\"" + resetLink + "\">Restablecer contraseña</a>"
-            );
-            return ResponseEntity.ok("Correo de recuperación enviado a" + email);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al enviar correo");
-        }
+        return """
+        <html>
+        <body style="margin:0; padding:0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f4f4;">
+            <table width="100%%" cellpadding="0" cellspacing="0" style="padding: 40px 0;">
+                <tr>
+                    <td align="center">
+                        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); overflow: hidden;">
+                            <tr>
+                                <td style="padding: 40px; text-align: center;">
+                                    <h1 style="color: #2C3E50; margin-bottom: 20px;">Restablece tu contraseña</h1>
+                                    <p style="color: #555555; font-size: 16px; line-height: 1.5;">
+                                        Hola, hemos recibido una solicitud para restablecer tu contraseña.<br>
+                                        Haz clic en el botón de abajo para continuar:
+                                    </p>
+                                    <a href="%s" style="
+                                        display: inline-block;
+                                        padding: 15px 30px;
+                                        margin: 30px 0;
+                                        font-size: 16px;
+                                        color: #ffffff;
+                                        background-color: #007BFF;
+                                        text-decoration: none;
+                                        border-radius: 5px;
+                                        font-weight: bold;
+                                    ">Restablecer contraseña</a>
+                                    <p style="color: #999999; font-size: 14px; line-height: 1.4;">
+                                        Si no solicitaste este cambio, puedes ignorar este correo.
+                                    </p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="background-color: #f1f1f1; padding: 20px; text-align: center; font-size: 12px; color: #aaaaaa;">
+                                    Este es un mensaje automático, por favor no respondas.<br>
+                                    &copy; 2025 Solutec Auth Service
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """.formatted(resetLink);
     }
+
 
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> request) {
