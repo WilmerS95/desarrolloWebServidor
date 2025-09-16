@@ -1,5 +1,8 @@
 package com.solutec.auth_service.controller;
 
+import com.solutec.auth_service.dto.ApiResponse;
+import com.solutec.auth_service.dto.LoginRequest;
+import com.solutec.auth_service.dto.LoginResponse;
 import com.solutec.auth_service.entity.*;
 import com.solutec.auth_service.repository.UserRepository;
 import com.solutec.auth_service.service.EmailService;
@@ -153,17 +156,16 @@ public class AuthController {
 
 
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> request) {
+    public ResponseEntity<ApiResponse> resetPassword(@RequestBody Map<String, String> request) {
         String token = request.get("token");
         String newPassword = request.get("newPassword");
 
-        boolean result = userService.resetPassword(token, newPassword);
+        ApiResponse response = userService.resetPassword(token, newPassword);
 
-        if (result) {
-            return ResponseEntity.ok(Map.of("message", "Contraseña actualizada correctamente"));
+        if (response.isSuccess()) {
+            return ResponseEntity.ok(response);
         } else {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", "Token inválido o expirado"));
+            return ResponseEntity.badRequest().body(response);
         }
     }
 }

@@ -1,4 +1,4 @@
-package com.solutec.auth_service.entity;
+package com.solutec.auth_service.dto;
 
 import lombok.Getter;
 import lombok.Setter;

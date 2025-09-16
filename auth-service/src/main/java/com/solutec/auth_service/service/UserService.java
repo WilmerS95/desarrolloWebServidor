@@ -1,6 +1,9 @@
 package com.solutec.auth_service.service;
 
+import com.solutec.auth_service.dto.ApiResponse;
 import com.solutec.auth_service.entity.*;
+import com.solutec.auth_service.exception.PasswordReuseException;
+import com.solutec.auth_service.repository.AuditLogRepository;
 import com.solutec.auth_service.repository.PasswordResetTokenRepository;
 import com.solutec.auth_service.repository.RoleRepository;
 import com.solutec.auth_service.repository.UserRepository;
@@ -8,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -18,6 +22,7 @@ public class UserService {
     private final RoleRepository roleRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final PasswordResetTokenRepository tokenRepository;
+    private final AuditLogRepository auditLogRepository;
 
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
@@ -53,6 +58,16 @@ public class UserService {
 
         User savedUser = userRepository.save(user);
 
+        /*AuditLog log = new AuditLog();
+        log.setChangedBy(savedUser);
+        log.setEntityType("User");
+        log.setEntityID(savedUser.getUserID());
+        log.setAction("CHANGE_PASSWORD");
+        log.setOldState(null);
+        log.setNewState(savedUser.getPassword());
+        log.setChangeDate(java.time.LocalDateTime.now());
+        auditLogRepository.save(log);*/
+
         return new UserResponse(savedUser.getUserID(), savedUser.getUsername(), savedUser.getEmail());
     }
 
@@ -70,17 +85,53 @@ public class UserService {
         return token;
     }
 
-    public boolean resetPassword(String token, String newPassword) {
+    public ApiResponse resetPassword(String token, String newPassword) {
         Optional<PasswordResetToken> prtOpt = tokenRepository.findByToken(token);
+
         if (prtOpt.isEmpty() || prtOpt.get().getExpiryDate().isBefore(java.time.LocalDateTime.now())) {
-            return false;
+            return new ApiResponse(false, "El enlace ya expiró o es inválido");
         }
 
         User user = prtOpt.get().getUser();
+
+        /*user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);*/
+
+        try {
+            changePasswordWithAudit(user, newPassword);
+        } catch (PasswordReuseException ex) {
+            return new ApiResponse(false, ex.getMessage());
+        }
+
+        tokenRepository.delete(prtOpt.get());
+        return new ApiResponse(true, "Contraseña actualizada correctamente");
+    }
+
+    private void changePasswordWithAudit(User user, String newPassword) {
+        List<AuditLog> lastPasswords = auditLogRepository
+                .findTop5ByEntityTypeAndEntityIDAndActionOrderByChangeDateDesc(
+                        "User", user.getUserID(), "CHANGE_PASSWORD"
+                );
+
+        for (AuditLog log : lastPasswords) {
+            if (passwordEncoder.matches(newPassword, log.getNewState())) {
+                throw new PasswordReuseException("No puede usar las últimas 5 contraseñas");
+            }
+        }
+
+        String oldPasswordHash = user.getPassword();
+
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
 
-        tokenRepository.delete(prtOpt.get());
-        return true;
+        AuditLog log = new AuditLog();
+        log.setChangedBy(user);
+        log.setEntityType("User");
+        log.setEntityID(user.getUserID());
+        log.setAction("CHANGE_PASSWORD");
+        log.setOldState(oldPasswordHash);
+        log.setNewState(user.getPassword());
+        log.setChangeDate(java.time.LocalDateTime.now());
+        auditLogRepository.save(log);
     }
 }
