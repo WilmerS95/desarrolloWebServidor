@@ -2,6 +2,11 @@ server:
   port: 8080
 
 spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          secret-key: ${JWT_SECRET}
   application:
     name: api-gateway
   cloud:
@@ -29,6 +34,3 @@ eureka:
     instance:
       lease-renewal-interval-in-seconds: 10
       lease-expiration-duration-in-seconds: 30
-
-jwt:
-  secret: ${JWT_SECRET}

@@ -1,5 +1,6 @@
 package com.solutec.loan_application_server.config;
 
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.security.config.Customizer;
@@ -16,6 +17,11 @@ import javax.crypto.spec.SecretKeySpec;
 public class SecurityConfig {
     @Value("${jwt.secret}")
     private String jwtSecret;
+
+    @PostConstruct
+    public void init() {
+        System.out.println("JWT Secret: " + jwtSecret);
+    }
 
     @Bean
     public JwtDecoder jwtDecoder() {
