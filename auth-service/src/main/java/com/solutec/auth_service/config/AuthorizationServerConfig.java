@@ -2,6 +2,8 @@ package com.solutec.auth_service.config;
 
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.OctetSequenceKey;
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
@@ -18,6 +20,14 @@ import java.util.UUID;
 
 @Configuration
 public class AuthorizationServerConfig {
+    @Value("${jwt.secret}")
+    private String jwtSecret;
+
+    @PostConstruct
+    public void init() {
+        System.out.println("JWT Secret: " + jwtSecret);
+    }
+
     @Bean
     public RegisteredClientRepository registeredClientRepository() {
         RegisteredClient registeredClient = RegisteredClient.withId(UUID.randomUUID().toString())
@@ -36,7 +46,7 @@ public class AuthorizationServerConfig {
 
     @Bean
     public JWKSource<SecurityContext> jwkSource() {
-        SecretKey secretKey = new SecretKeySpec("MiClaveSecretaMuySegura12345MiClaveSecretaMuySegura12345".getBytes(), "HmacSHA256");
+        SecretKey secretKey = new SecretKeySpec(jwtSecret.getBytes(), "HmacSHA256");
         OctetSequenceKey jwk = new OctetSequenceKey.Builder(secretKey).keyID(UUID.randomUUID().toString()).build();
         JWKSet jwkSet = new JWKSet(jwk);
         return (jwkSelector, securityContext) -> jwkSelector.select(jwkSet);

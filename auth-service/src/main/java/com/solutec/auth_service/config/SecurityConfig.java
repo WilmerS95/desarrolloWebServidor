@@ -1,5 +1,7 @@
 package com.solutec.auth_service.config;
 
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -37,7 +39,13 @@ public class SecurityConfig {
 
     private final String FRONTEND_URL = "http://192.168.1.33:4200";
 
-    private static final String SECRET = "q3r8!vB2zX#p9LmN6sT&uW5yH@dK1fG4";
+    @Value("${jwt.secret}")
+    private String jwtSecret;
+
+    @PostConstruct
+    public void init() {
+        System.out.println("JWT Secret: " + jwtSecret);
+    }
 
     @Bean
     @Order(1)
@@ -122,7 +130,7 @@ public class SecurityConfig {
     @Bean
     public JwtDecoder jwtDecoder() {
         return NimbusJwtDecoder
-                .withSecretKey(new SecretKeySpec(SECRET.getBytes(StandardCharsets.UTF_8), "HmacSHA256"))
+                .withSecretKey(new SecretKeySpec(jwtSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"))
                 .build();
     }
 }
