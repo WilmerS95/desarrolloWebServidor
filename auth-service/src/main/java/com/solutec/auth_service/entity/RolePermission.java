@@ -1,11 +1,7 @@
-package com.solutec.login_service.entity;
+package com.solutec.auth_service.entity;
 
-import com.solutec.auth_service.entity.Permission;
-import com.solutec.auth_service.entity.Role;
-import com.solutec.auth_service.entity.RolePermissionId;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 @Getter
 @Setter

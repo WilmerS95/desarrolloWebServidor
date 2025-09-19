@@ -1,8 +1,9 @@
 package com.solutec.auth_service.entity;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
+
+import java.util.Set;
 
 @Getter
 @Setter
@@ -11,10 +12,12 @@ import lombok.Setter;
 public class Permission {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "permissionId")
     private Long permissionId;
 
-    @Column(name = "permissionName")
+    @Column(name = "permissionName", nullable = false)
     private String permissionName;
+
+    @OneToMany(mappedBy = "permission", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<RolePermission> rolePermissions;
 }

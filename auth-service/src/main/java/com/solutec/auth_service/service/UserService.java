@@ -3,10 +3,7 @@ package com.solutec.auth_service.service;
 import com.solutec.auth_service.dto.ApiResponse;
 import com.solutec.auth_service.entity.*;
 import com.solutec.auth_service.exception.PasswordReuseException;
-import com.solutec.auth_service.repository.AuditLogRepository;
-import com.solutec.auth_service.repository.PasswordResetTokenRepository;
-import com.solutec.auth_service.repository.RoleRepository;
-import com.solutec.auth_service.repository.UserRepository;
+import com.solutec.auth_service.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -36,12 +33,13 @@ public class UserService {
             throw new RuntimeException("El correo ya está registrado");
         }
 
-        Role defaultRole = roleRepository.findByRoleName("CLIENTE")
+        /*Role defaultRole = roleRepository.findByRoleName("CLIENTE")
                 .orElseGet(() -> {
                     Role newRole = new Role();
                     newRole.setRoleName("CLIENTE");
                     return roleRepository.save(newRole);
-                });
+                });*/
+        Role defaultRole = roleRepository.findByRoleName("CLIENTE").orElseThrow();
 
         User user = new User();
         user.setUsername(request.getUsername());
