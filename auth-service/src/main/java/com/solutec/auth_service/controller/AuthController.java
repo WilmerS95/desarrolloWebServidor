@@ -18,7 +18,6 @@ import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -53,6 +52,7 @@ public class AuthController {
                                 .expiresAt(Instant.now().plusSeconds(3600))
                                 .subject(user.getUsername())
                                 .claim("role", user.getRole() != null ? user.getRole().getRoleName() : null)
+                                .claim("userId", user.getUserID())
                                 .claim("email", user.getEmail())
                                 .build();
 
