@@ -1,7 +1,5 @@
 package com.solutec.loan_application_server.config;
 
-import jakarta.annotation.PostConstruct;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -10,24 +8,13 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.security.web.SecurityFilterChain;
 
-import javax.crypto.spec.SecretKeySpec;
-
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-    @Value("${jwt.secret}")
-    private String jwtSecret;
-
-    @PostConstruct
-    public void init() {
-        System.out.println("JWT Secret: " + jwtSecret);
-    }
 
     @Bean
     public JwtDecoder jwtDecoder() {
-        return NimbusJwtDecoder.withSecretKey(
-                new SecretKeySpec(jwtSecret.getBytes(), "HmacSHA256")
-        ).build();
+        return NimbusJwtDecoder.withJwkSetUri("http://localhost:9000/.well-known/jwks.json").build();
     }
 
     @Bean

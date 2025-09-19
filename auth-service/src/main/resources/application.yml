@@ -35,7 +35,6 @@ spring:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
         implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
 
-
 eureka:
   client:
     register-with-eureka: true
@@ -45,6 +44,3 @@ eureka:
     instance:
       lease-renewal-interval-in-seconds: 10
       lease-expiration-duration-in-seconds: 30
-
-jwt:
-  secret: ${JWT_SECRET}

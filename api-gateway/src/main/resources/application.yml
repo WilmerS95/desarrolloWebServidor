@@ -17,11 +17,11 @@ spring:
           lower-case-service-id: true
       routes:
         - id: auth-service
-          uri: http://192.168.1.33:9000
+          uri: http://localhost:9000
           predicates:
             - Path=/auth/**
         - id: loan-application
-          uri: http://192.168.1.33:8083
+          uri: http://localhost:8083
           predicates:
             - Path=/loan-applications/**
 

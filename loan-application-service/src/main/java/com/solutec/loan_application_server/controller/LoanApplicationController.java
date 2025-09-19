@@ -8,6 +8,6 @@ import org.springframework.web.bind.annotation.*;
 public class LoanApplicationController {
     @GetMapping
     public String getLoans(Authentication authentication) {
-        return "Acceso a préstamos autorizado para usuario: " + authentication.getName();
+        return "Acceso a préstamos autorizado para usuario Loan: " + authentication.getName();
     }
 }
