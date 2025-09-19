@@ -18,6 +18,7 @@ import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -51,7 +52,7 @@ public class AuthController {
                                 .issuedAt(Instant.now())
                                 .expiresAt(Instant.now().plusSeconds(3600))
                                 .subject(user.getUsername())
-                                .claim("roles", user.getRoles().stream().map(Role::getRoleName).toList())
+                                .claim("role", user.getRole() != null ? user.getRole().getRoleName() : null)
                                 .build();
 
                         String token = jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
@@ -65,7 +66,6 @@ public class AuthController {
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("message", "Usuario no encontrado")));
     }
-
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
