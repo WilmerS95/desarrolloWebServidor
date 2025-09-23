@@ -1,11 +1,8 @@
-package com.solutec.auth_service.entity;
+package com.solutec.loan_application_server.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.util.HashSet;
-import java.util.Set;
 
 @Setter
 @Getter
@@ -48,9 +45,9 @@ public class User {
     @Column(name = "address")
     private String address;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    /*@ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "roleID")
-    private Role role;
+    private Role role;*/
 
     /*@ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(

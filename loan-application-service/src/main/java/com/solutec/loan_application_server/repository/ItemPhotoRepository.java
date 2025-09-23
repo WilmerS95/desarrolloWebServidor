@@ -1,4 +1,6 @@
 package com.solutec.loan_application_server.repository;
 
-public interface ItemPhotoRepository {
-}
+import com.solutec.loan_application_server.entity.ItemPhoto;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface ItemPhotoRepository extends JpaRepository<ItemPhoto, Long> {}
