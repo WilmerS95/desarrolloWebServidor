@@ -57,6 +57,16 @@ public class LoanApplicationController {
             @RequestPart(value = "files", required = false) List<MultipartFile> files,
             @AuthenticationPrincipal Jwt jwt) throws Exception {
 
+        System.out.println("=> Recibido LoanApplicationRequest: " + data);
+        System.out.println("=> Recibido LoanApplicationRequest: " + data);
+        if (files != null) {
+            System.out.println("=> Received files count: " + files.size());
+            for (MultipartFile f : files) {
+                System.out.println("   file: " + f.getOriginalFilename() + " size=" + f.getSize());
+            }
+        } else {
+            System.out.println("=> No files received");
+        }
         Object userIdObj = jwt.getClaims().get("userId");
         if (userIdObj == null) {
             return ResponseEntity.status(401).body("userId claim missing in token");
@@ -95,6 +105,11 @@ public class LoanApplicationController {
         la.setStatus("PENDING");
         la = loanApplicationRepository.save(la);
 
-        return ResponseEntity.ok(la);
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("loan", la);
+        resp.put("item", item);
+        resp.put("photos", itemPhotoRepository.findAll());
+
+        return ResponseEntity.ok(resp);
     }
 }

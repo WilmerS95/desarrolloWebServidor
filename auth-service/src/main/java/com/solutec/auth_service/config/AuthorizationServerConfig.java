@@ -1,3 +1,4 @@
+/*
 package com.solutec.auth_service.config;
 
 import com.nimbusds.jose.jwk.JWKSet;
@@ -52,3 +53,4 @@ public class AuthorizationServerConfig {
         return (jwkSelector, securityContext) -> jwkSelector.select(jwkSet);
     }
 }
+*/
