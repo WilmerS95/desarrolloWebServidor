@@ -1,5 +1,6 @@
 package com.solutec.loan_application_server.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -14,9 +15,12 @@ import org.springframework.security.config.Customizer;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    @Value("${frontend.url-decoder}")
+    private String urlDecoder;
+
     @Bean
     public JwtDecoder jwtDecoder() {
-        return NimbusJwtDecoder.withJwkSetUri("http://localhost:9000/.well-known/jwks.json").build();
+        return NimbusJwtDecoder.withJwkSetUri(urlDecoder + "/.well-known/jwks.json").build();
     }
 
     @Bean

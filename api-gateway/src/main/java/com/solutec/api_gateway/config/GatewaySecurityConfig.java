@@ -1,5 +1,6 @@
 package com.solutec.api_gateway.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
@@ -12,9 +13,12 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 @EnableWebFluxSecurity
 public class GatewaySecurityConfig {
 
+    @Value("${frontend.url-decoder}")
+    private String urlDecoder;
+
     @Bean
     public ReactiveJwtDecoder reactiveJwtDecoder() {
-        return NimbusReactiveJwtDecoder.withJwkSetUri("http://localhost:9000/.well-known/jwks.json").build();
+        return NimbusReactiveJwtDecoder.withJwkSetUri(urlDecoder + "/.well-known/jwks.json").build();
     }
 
     @Bean

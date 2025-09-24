@@ -1,6 +1,10 @@
 server:
   port: 8080
 
+frontend:
+  base-url: http://192.168.1.37:4200
+  url-decoder: http://192.168.1.37:9000
+
 spring:
   security:
     oauth2:

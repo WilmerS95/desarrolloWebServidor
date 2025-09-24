@@ -9,6 +9,7 @@ import com.solutec.auth_service.service.EmailService;
 import com.solutec.auth_service.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -34,6 +35,9 @@ public class AuthController {
     private UserRepository userRepository;
 
     private final JwtEncoder jwtEncoder;
+
+    @Value("${frontend.base-url}")
+    private String frontendBaseUrl;
 
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
@@ -99,7 +103,7 @@ public class AuthController {
             emailService.sendEmail(
                     email,
                     "Recuperar contraseña",
-                    getEmailContent(token)
+                    getEmailContent(token, frontendBaseUrl)
             );
             return ResponseEntity.ok(Map.of("message", "Correo de recuperación enviado"));
         } catch (Exception e) {
@@ -107,8 +111,8 @@ public class AuthController {
         }
     }
 
-    private static String getEmailContent(String token) {
-        String resetLink = "http://192.168.1.33:4200/reset-password?token=" + token;
+    private static String getEmailContent(String token, String frontendBaseUrl) {
+        String resetLink = frontendBaseUrl + "/reset-password?token=" + token;
 
         return """
         <html>
