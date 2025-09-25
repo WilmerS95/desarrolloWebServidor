@@ -48,7 +48,7 @@ public class AuthController {
                 .map(user -> {
                     if (passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
                         Instant now = Instant.now();
-                        long expiry = 3600L; // 1 hora
+                        long expiry = 3600L;
 
                         JwtClaimsSet claims = JwtClaimsSet.builder()
                                 .issuer("auth-service")
@@ -65,7 +65,7 @@ public class AuthController {
                         return ResponseEntity.ok(new LoginResponse(token));
                     } else {
                         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                                .body(Map.of("message", "Contraseña incorrecta"));
+                                .body(Map.of("message", "Usuario o contraseña incorrectos"));
                     }
                 })
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED)

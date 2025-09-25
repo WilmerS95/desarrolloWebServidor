@@ -1,4 +1,4 @@
-package com.solutec.auth_service.entity;
+package com.solutec.user_service.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
