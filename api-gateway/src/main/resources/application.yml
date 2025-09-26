@@ -1,0 +1,44 @@
+server:
+  port: 8080
+
+frontend:
+  base-url: http://192.168.116.57:4200
+  url-decoder: http://192.168.116.57:9000
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          secret-key: ${JWT_SECRET}
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: auth-service
+          uri: http://192.168.116.57:9000
+          predicates:
+            - Path=/auth/**
+        - id: loan-application
+          uri: http://192.168.116.57:8083
+          predicates:
+            - Path=/loan-applications/**
+        - id: user-service
+          uri: http://192.168.116.57:8082
+          predicates:
+            - Path=/admin/users/**
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://192.168.116.57:8761/eureka
+    instance:
+      lease-renewal-interval-in-seconds: 10
+      lease-expiration-duration-in-seconds: 30

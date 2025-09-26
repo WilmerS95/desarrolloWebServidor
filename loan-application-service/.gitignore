@@ -31,5 +31,4 @@ build/
 
 ### VS Code ###
 .vscode/
-.DS_Store
 loan-application-service/src/main/resources/solutec-pawn-firebase-adminsdk-fbsvc-0f38213e82.json
