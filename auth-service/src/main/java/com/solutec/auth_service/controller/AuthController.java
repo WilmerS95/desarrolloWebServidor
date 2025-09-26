@@ -50,6 +50,10 @@ public class AuthController {
                         Instant now = Instant.now();
                         long expiry = 3600L;
 
+                        var permissions = user.getRole().getRolePermissions().stream()
+                                .map(rp -> rp.getPermission().getPermissionName())
+                                .toList();
+
                         JwtClaimsSet claims = JwtClaimsSet.builder()
                                 .issuer("auth-service")
                                 .issuedAt(Instant.now())
@@ -58,6 +62,7 @@ public class AuthController {
                                 .claim("role", user.getRole() != null ? user.getRole().getRoleName() : null)
                                 .claim("userId", user.getUserID())
                                 .claim("email", user.getEmail())
+                                .claim("permissions", permissions)
                                 .build();
 
                         String token = jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();

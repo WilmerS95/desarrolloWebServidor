@@ -14,12 +14,12 @@ public class RolePermission {
     @Id
     @ManyToOne
     @JoinColumn(name = "permissionID")
-    @JsonIgnore
+    //@JsonIgnore
     private Permission permission;
 
     @Id
     @ManyToOne
     @JoinColumn(name = "roleId")
-    @JsonIgnore
+    //@JsonIgnore
     private Role role;
 }

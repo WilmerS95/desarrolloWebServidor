@@ -1,7 +1,11 @@
 package com.solutec.user_service.controller;
 
+import com.solutec.user_service.dto.RoleDTO;
+import com.solutec.user_service.dto.RoleRequest;
 import com.solutec.user_service.dto.UserDTO;
+import com.solutec.user_service.entity.Role;
 import com.solutec.user_service.entity.User;
+import com.solutec.user_service.service.RoleService;
 import com.solutec.user_service.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,9 +20,11 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
+    private final RoleService roleService;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, RoleService roleService) {
         this.userService = userService;
+        this.roleService = roleService;
     }
 
     private Long extractUserIdFromJwt(Jwt jwt) {
@@ -57,6 +63,42 @@ public class UserController {
         } else {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No autorizado");
         }
+    }
+
+    @GetMapping("/roles")
+    public ResponseEntity<List<RoleDTO>> getAllRoles() {
+        return ResponseEntity.ok(roleService.getAllRoles());
+    }
+
+    @GetMapping("roles/{id}")
+    public ResponseEntity<RoleDTO> getRole(@PathVariable Long id) {
+        return ResponseEntity.ok(roleService.getRoleById(id));
+    }
+
+    @PostMapping("/roles")
+    public ResponseEntity<RoleDTO> createRole(@RequestBody RoleRequest request) {
+        Role role = new Role();
+        role.setRoleName(request.getRoleName());
+        role.setDescription(request.getDescription());
+
+        RoleDTO dto = roleService.createRole(role, request.getPermissionIds());
+        return ResponseEntity.ok(dto);
+    }
+
+    @PutMapping("/roles/{id}")
+    public ResponseEntity<RoleDTO> updateRole(@PathVariable Long id, @RequestBody RoleRequest request) {
+        Role role = new Role();
+        role.setRoleName(request.getRoleName());
+        role.setDescription(request.getDescription());
+
+        RoleDTO dto = roleService.updateRole(id, role, request.getPermissionIds());
+        return ResponseEntity.ok(dto);
+    }
+
+    @DeleteMapping("roles/{id}")
+    public ResponseEntity<Void> deleteRole(@PathVariable Long id) {
+        roleService.deleteRole(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/{id}")

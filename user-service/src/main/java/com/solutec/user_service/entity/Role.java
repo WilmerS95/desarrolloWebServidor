@@ -18,6 +18,8 @@ public class Role {
     @Column(name = "roleName", nullable = false)
     private String roleName;
 
-    @OneToMany(mappedBy = "role", cascade = CascadeType.ALL, orphanRemoval = true)
+    private String description;
+
+    @OneToMany(mappedBy = "role", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private Set<RolePermission> rolePermissions;
 }
