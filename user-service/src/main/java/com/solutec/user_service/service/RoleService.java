@@ -39,6 +39,10 @@ public class RoleService {
 
     @Transactional
     public RoleDTO createRole(Role role, List<Long> permissionIds) {
+        if (permissionIds == null) {
+            permissionIds = List.of();
+        }
+
         Set<RolePermission> perms = permissionIds.stream()
                 .map(pid -> {
                     Permission p = permissionRepository.findById(pid)
@@ -54,17 +58,20 @@ public class RoleService {
         return toDTO(saved);
     }
 
-
     @Transactional
     public RoleDTO updateRole(Long id, Role roleData, List<Long> permissionIds) {
+        if (permissionIds == null) {
+            permissionIds = List.of();
+        }
+
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
 
         role.setRoleName(roleData.getRoleName());
         role.setDescription(roleData.getDescription());
 
-        // Actualizar permisos
         role.getRolePermissions().clear();
+
         Set<RolePermission> newPerms = permissionIds.stream()
                 .map(pid -> {
                     Permission p = permissionRepository.findById(pid)
@@ -75,7 +82,7 @@ public class RoleService {
                     return rp;
                 }).collect(Collectors.toSet());
 
-        role.setRolePermissions(newPerms);
+        role.getRolePermissions().addAll(newPerms);
 
         Role updated = roleRepository.save(role);
         return toDTO(updated);

@@ -1,10 +1,12 @@
 package com.solutec.user_service.controller;
 
+import com.solutec.user_service.dto.PermissionDTO;
 import com.solutec.user_service.dto.RoleDTO;
 import com.solutec.user_service.dto.RoleRequest;
 import com.solutec.user_service.dto.UserDTO;
 import com.solutec.user_service.entity.Role;
 import com.solutec.user_service.entity.User;
+import com.solutec.user_service.service.PermissionService;
 import com.solutec.user_service.service.RoleService;
 import com.solutec.user_service.service.UserService;
 import org.springframework.http.HttpStatus;
@@ -21,10 +23,12 @@ public class UserController {
 
     private final UserService userService;
     private final RoleService roleService;
+    private final PermissionService permissionService;
 
-    public UserController(UserService userService, RoleService roleService) {
+    public UserController(UserService userService, RoleService roleService, PermissionService permissionService) {
         this.userService = userService;
         this.roleService = roleService;
+        this.permissionService = permissionService;
     }
 
     private Long extractUserIdFromJwt(Jwt jwt) {
@@ -43,6 +47,11 @@ public class UserController {
 
     private boolean isAdminRole(String role) {
         return role != null && (role.equalsIgnoreCase("ADMIN") || role.equalsIgnoreCase("SA") || role.equalsIgnoreCase("SUPER_ADMIN"));
+    }
+
+    @GetMapping("/permissions")
+    public ResponseEntity<List<PermissionDTO>> getAllPermissions() {
+        return ResponseEntity.ok(permissionService.getAllPermissions());
     }
 
     @GetMapping("/me")
