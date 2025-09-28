@@ -156,43 +156,104 @@ public class LoanApplicationController {
 
     private String userEmailTemplate(User user, LoanApplication la, Item item) {
         return """
-            <h2>Solicitud recibida</h2>
-            <p>Hola %s, hemos recibido tu solicitud de empeño.</p>
-            <p><b>Artículo:</b> %s</p>
-            <p><b>Marca:</b> %s</p>
-            <p><b>Pagos:</b> %d</p>
-            <p>Pronto te avisaremos si es aprobada, rechazada o si existe una contrapropuesta.</p>
-            """.formatted(user.getFirstName(), item.getNameItem(), item.getBrand(), la.getQuantityPayments());
+    <html>
+    <body style="margin:0; padding:0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color:#f4f4f4;">
+        <table width="100%%" cellpadding="0" cellspacing="0" style="padding:40px 0;">
+            <tr>
+                <td align="center">
+                    <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,0.1); overflow:hidden;">
+                        <tr>
+                            <td style="padding:40px; text-align:center;">
+                                <h1 style="color:#2C3E50; margin-bottom:20px;">Solicitud de empeño recibida</h1>
+                                <p style="color:#555; font-size:16px; line-height:1.5;">
+                                    Hola <b>%s</b>, hemos recibido tu solicitud de empeño.
+                                </p>
+                                <table style="margin:20px auto; text-align:left; font-size:16px; color:#333;">
+                                    <tr><td><b>Artículo:</b></td><td>%s</td></tr>
+                                    <tr><td><b>Marca:</b></td><td>%s</td></tr>
+                                    <tr><td><b>Pagos:</b></td><td>%d</td></tr>
+                                </table>
+                                <p style="color:#555; font-size:16px;">
+                                    Pronto te avisaremos si es aprobada, rechazada o si existe una contrapropuesta.
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="background-color:#f1f1f1; padding:20px; text-align:center; font-size:12px; color:#aaaaaa;">
+                                &copy; 2025 Solutec Loan Service – Este es un mensaje automático, por favor no respondas.
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    """.formatted(user.getFirstName(), item.getNameItem(), item.getBrand(), la.getQuantityPayments());
     }
 
     private String adminEmailTemplate(User user, LoanApplication la, Item item) {
         StringBuilder photos = new StringBuilder();
         itemPhotoRepository.findByItem(item).forEach(ip ->
-            photos.append("<img src='")
-                .append(ip.getPhotoPath())
-                .append("' width='200' style='margin:5px;'/>")
+                photos.append("<img src='")
+                        .append(ip.getPhotoPath())
+                        .append("' width='180' style='margin:5px;border-radius:6px;border:1px solid #ddd;'/>")
         );
 
         return """
-            <h2>Nueva solicitud de empeño</h2>
-            <p><b>Cliente:</b> %s %s</p>
-            <p><b>Email:</b> %s</p>
-            <p><b>Artículo:</b> %s (%s)</p>
-            <p><b>Pagos:</b> %d</p>
-            <h3>Fotos:</h3>%s
-            <p><a href='http://192.168.1.35:4200/admin/solicitudes/%d'
-                  style='background-color:#4CAF50;color:white;
-                         padding:10px 20px;text-decoration:none;'>
-                  Revisar Solicitud</a></p>
-            """.formatted(
-                user.getFirstName(),
-                user.getFirstLastName(),
-                user.getEmail(),
-                item.getNameItem(),
-                item.getBrand(),
-                la.getQuantityPayments(),
-                photos.toString(),
-                la.getLoanApplicationID()
+    <html>
+    <body style="margin:0; padding:0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color:#f4f4f4;">
+        <table width="100%%" cellpadding="0" cellspacing="0" style="padding:40px 0;">
+            <tr>
+                <td align="center">
+                    <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,0.1); overflow:hidden;">
+                        <tr>
+                            <td style="padding:40px;">
+                                <h1 style="color:#2C3E50; text-align:center; margin-bottom:20px;">Nueva solicitud de empeño</h1>
+                                <p style="color:#555; font-size:16px; line-height:1.5;">
+                                    <b>Cliente:</b> %s %s<br>
+                                    <b>Email:</b> %s
+                                </p>
+                                <table style="margin:20px auto; text-align:left; font-size:16px; color:#333;">
+                                    <tr><td><b>Artículo:</b></td><td>%s (%s)</td></tr>
+                                    <tr><td><b>Pagos:</b></td><td>%d</td></tr>
+                                </table>
+                                <h3 style="color:#2C3E50; text-align:center;">Fotos del artículo</h3>
+                                <div style="text-align:center;">%s</div>
+                                <div style="text-align:center; margin-top:30px;">
+                                    <a href="http://192.168.1.35:4200/admin/solicitudes/%d" style="
+                                        display:inline-block;
+                                        padding:15px 30px;
+                                        font-size:16px;
+                                        color:#ffffff;
+                                        background-color:#28a745;
+                                        text-decoration:none;
+                                        border-radius:5px;
+                                        font-weight:bold;
+                                    ">Revisar Solicitud</a>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="background-color:#f1f1f1; padding:20px; text-align:center; font-size:12px; color:#aaaaaa;">
+                                &copy; 2025 Solutec Loan Service – Este es un mensaje automático, por favor no respondas.
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    """.formatted(
+            user.getFirstName(),
+            user.getFirstLastName(),
+            user.getEmail(),
+            item.getNameItem(),
+            item.getBrand(),
+            la.getQuantityPayments(),
+            photos.toString(),
+            la.getLoanApplicationID()
         );
     }
 }
