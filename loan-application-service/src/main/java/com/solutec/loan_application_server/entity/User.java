@@ -45,9 +45,9 @@ public class User {
     @Column(name = "address")
     private String address;
 
-    /*@ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "roleID")
-    private Role role;*/
+    private Role role;
 
     /*@ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(

@@ -1,9 +1,13 @@
 package com.solutec.loan_application_server.controller;
 
 import com.solutec.loan_application_server.dto.LoanApplicationRequest;
+import com.solutec.loan_application_server.dto.LoanApplicationResponse;
 import com.solutec.loan_application_server.entity.*;
 import com.solutec.loan_application_server.repository.*;
-import com.solutec.loan_application_server.service.FirebaseStorageService;
+import com.solutec.loan_application_server.service.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -18,6 +22,12 @@ import java.util.*;
 @RestController
 @RequestMapping("/loan-applications")
 public class LoanApplicationController {
+
+    private static final Logger log =
+            LoggerFactory.getLogger(LoanApplicationController.class);
+
+    @Autowired
+    private EmailService emailService;
 
     @GetMapping
     public String getLoans(Authentication authentication) {
@@ -46,6 +56,16 @@ public class LoanApplicationController {
             this.categoryRepository = categoryRepository;
     }
 
+    @GetMapping("/admin-emails")
+    public List<String> getAdminEmails() {
+        return userRepository.findAll().stream()
+                .filter(u -> u.getRole() != null &&
+                        (u.getRole().getRoleName().equalsIgnoreCase("ADMIN")
+                                || u.getRole().getRoleName().equalsIgnoreCase("SUPER_ADMIN")))
+                .map(User::getEmail)
+                .toList();
+    }
+
     @GetMapping("/categories")
     public List<Category> getAllCategories() {
         return categoryRepository.findAll();
@@ -57,16 +77,6 @@ public class LoanApplicationController {
             @RequestPart(value = "files", required = false) List<MultipartFile> files,
             @AuthenticationPrincipal Jwt jwt) throws Exception {
 
-        System.out.println("=> Recibido LoanApplicationRequest: " + data);
-        System.out.println("=> Recibido LoanApplicationRequest: " + data);
-        if (files != null) {
-            System.out.println("=> Received files count: " + files.size());
-            for (MultipartFile f : files) {
-                System.out.println("   file: " + f.getOriginalFilename() + " size=" + f.getSize());
-            }
-        } else {
-            System.out.println("=> No files received");
-        }
         Object userIdObj = jwt.getClaims().get("userId");
         if (userIdObj == null) {
             return ResponseEntity.status(401).body("userId claim missing in token");
@@ -78,6 +88,8 @@ public class LoanApplicationController {
         if (userOpt.isEmpty()) {
             return ResponseEntity.status(401).body("Usuario no encontrado");
         }
+
+        User user = userOpt.get();
 
         Item item = new Item();
         item.setNameItem(data.getNameItem());
@@ -105,11 +117,82 @@ public class LoanApplicationController {
         la.setStatus("PENDING");
         la = loanApplicationRepository.save(la);
 
-        Map<String, Object> resp = new HashMap<>();
-        resp.put("loan", la);
-        resp.put("item", item);
-        resp.put("photos", itemPhotoRepository.findAll());
+        emailService.sendEmail(
+            user.getEmail(),
+            "Tu solicitud de empeño ha sido recibida",
+            userEmailTemplate(user, la, item)
+        );
 
-        return ResponseEntity.ok(resp);
+        List<User> admins = userRepository.findAll().stream()
+            .filter(u -> u.getRole() != null &&
+                ("ADMIN".equalsIgnoreCase(u.getRole().getRoleName()) || "SUPER_ADMIN".equalsIgnoreCase(u.getRole().getRoleName())))
+            .toList();
+
+        for (User admin : admins) {
+            emailService.sendEmail(
+                admin.getEmail(),
+                "Nueva solicitud de empeño #" + la.getLoanApplicationID(),
+                adminEmailTemplate(user, la, item)
+            );
+        }
+
+        List<String> photoUrls = itemPhotoRepository.findByItem(item).stream()
+                .map(ItemPhoto::getPhotoPath)
+                .toList();
+
+        LoanApplicationResponse response = new LoanApplicationResponse(
+                la.getLoanApplicationID(),
+                item.getItemID(),
+                item.getNameItem(),
+                item.getBrand(),
+                la.getQuantityPayments(),
+                la.getApplicationDate(),
+                la.getStatus(),
+                photoUrls
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    private String userEmailTemplate(User user, LoanApplication la, Item item) {
+        return """
+            <h2>Solicitud recibida</h2>
+            <p>Hola %s, hemos recibido tu solicitud de empeño.</p>
+            <p><b>Artículo:</b> %s</p>
+            <p><b>Marca:</b> %s</p>
+            <p><b>Pagos:</b> %d</p>
+            <p>Pronto te avisaremos si es aprobada, rechazada o si existe una contrapropuesta.</p>
+            """.formatted(user.getFirstName(), item.getNameItem(), item.getBrand(), la.getQuantityPayments());
+    }
+
+    private String adminEmailTemplate(User user, LoanApplication la, Item item) {
+        StringBuilder photos = new StringBuilder();
+        itemPhotoRepository.findByItem(item).forEach(ip ->
+            photos.append("<img src='")
+                .append(ip.getPhotoPath())
+                .append("' width='200' style='margin:5px;'/>")
+        );
+
+        return """
+            <h2>Nueva solicitud de empeño</h2>
+            <p><b>Cliente:</b> %s %s</p>
+            <p><b>Email:</b> %s</p>
+            <p><b>Artículo:</b> %s (%s)</p>
+            <p><b>Pagos:</b> %d</p>
+            <h3>Fotos:</h3>%s
+            <p><a href='http://192.168.1.35:4200/admin/solicitudes/%d'
+                  style='background-color:#4CAF50;color:white;
+                         padding:10px 20px;text-decoration:none;'>
+                  Revisar Solicitud</a></p>
+            """.formatted(
+                user.getFirstName(),
+                user.getFirstLastName(),
+                user.getEmail(),
+                item.getNameItem(),
+                item.getBrand(),
+                la.getQuantityPayments(),
+                photos.toString(),
+                la.getLoanApplicationID()
+        );
     }
 }
