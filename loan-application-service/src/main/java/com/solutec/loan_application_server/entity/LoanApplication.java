@@ -17,7 +17,7 @@ public class LoanApplication {
     private User user;
 
     @OneToOne
-    @JoinColumn(name = "itemId")
+    @JoinColumn(name = "itemID", nullable = false)
     private Item item;
 
     @Column(name = "quantityPayments")

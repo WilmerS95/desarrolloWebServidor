@@ -5,6 +5,7 @@ import com.solutec.loan_application_server.dto.LoanApplicationResponse;
 import com.solutec.loan_application_server.entity.*;
 import com.solutec.loan_application_server.repository.*;
 import com.solutec.loan_application_server.service.*;
+import jakarta.mail.MessagingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -117,23 +118,29 @@ public class LoanApplicationController {
         la.setStatus("PENDING");
         la = loanApplicationRepository.save(la);
 
-        emailService.sendEmail(
-            user.getEmail(),
-            "Tu solicitud de empeño ha sido recibida",
-            userEmailTemplate(user, la, item)
-        );
-
-        List<User> admins = userRepository.findAll().stream()
-            .filter(u -> u.getRole() != null &&
-                ("ADMIN".equalsIgnoreCase(u.getRole().getRoleName()) || "SUPER_ADMIN".equalsIgnoreCase(u.getRole().getRoleName())))
-            .toList();
-
-        for (User admin : admins) {
+        try{
             emailService.sendEmail(
-                admin.getEmail(),
-                "Nueva solicitud de empeño #" + la.getLoanApplicationID(),
-                adminEmailTemplate(user, la, item)
+                user.getEmail(),
+                "Tu solicitud de empeño ha sido recibida",
+                userEmailTemplate(user, la, item)
             );
+            List<User> admins = userRepository.findAll().stream()
+                .filter(u -> u.getRole() != null && ("ADMIN".equalsIgnoreCase(u.getRole().getRoleName()) || "SUPER_ADMIN".equalsIgnoreCase(u.getRole().getRoleName()))).toList();
+
+            for (User admin : admins) {
+                emailService.sendEmail(
+                    admin.getEmail(),
+                    "Nueva solicitud de empeño #" + la.getLoanApplicationID(),
+                    adminEmailTemplate(user, la, item)
+                );
+            }
+        } catch (Exception e){
+            log.error("Error enviando correos de solicitud de empeño", e);
+            return ResponseEntity.status(500)
+                .body(Map.of(
+                        "error", "No se pudo enviar los correos de notificación",
+                        "detalle", e.getMessage()
+                ));
         }
 
         List<String> photoUrls = itemPhotoRepository.findByItem(item).stream()
@@ -255,5 +262,100 @@ public class LoanApplicationController {
             photos.toString(),
             la.getLoanApplicationID()
         );
+    }
+
+    @GetMapping("/admin/all")
+    public ResponseEntity<List<LoanApplicationResponse>> getAllApplications() {
+        List<LoanApplicationResponse> list = loanApplicationRepository.findAll()
+            .stream()
+            .map(la -> {
+                List<String> photoUrls = itemPhotoRepository.findByItem(la.getItem())
+                        .stream()
+                        .map(ItemPhoto::getPhotoPath)
+                        .toList();
+                return new LoanApplicationResponse(
+                        la.getLoanApplicationID(),
+                        la.getItem().getItemID(),
+                        la.getItem().getNameItem(),
+                        la.getItem().getBrand(),
+                        la.getQuantityPayments(),
+                        la.getApplicationDate(),
+                        la.getStatus(),
+                        photoUrls
+                );
+            })
+            .toList();
+        return ResponseEntity.ok(list);
+    }
+
+    @GetMapping("/admin/{id}")
+    public ResponseEntity<?> getApplicationById(@PathVariable Long id) {
+        return loanApplicationRepository.findById(id)
+            .map(la -> {
+                List<String> photoUrls = itemPhotoRepository.findByItem(la.getItem())
+                    .stream()
+                    .map(ItemPhoto::getPhotoPath)
+                    .toList();
+                return ResponseEntity.ok(
+                    new LoanApplicationResponse(
+                        la.getLoanApplicationID(),
+                        la.getItem().getItemID(),
+                        la.getItem().getNameItem(),
+                        la.getItem().getBrand(),
+                        la.getQuantityPayments(),
+                        la.getApplicationDate(),
+                        la.getStatus(),
+                        photoUrls
+                    )
+                );
+            })
+            .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/admin/{id}/status")
+    public ResponseEntity<?> updateApplicationStatus(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+
+        String newStatus = body.get("status");
+        if (newStatus == null || newStatus.isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "El campo 'status' es obligatorio"));
+        }
+
+        return loanApplicationRepository.findById(id)
+            .map(la -> {
+                la.setStatus(newStatus.toUpperCase());
+                loanApplicationRepository.save(la);
+
+                try {
+                    emailService.sendEmail(
+                        la.getUser().getEmail(),
+                        "Actualización de tu solicitud de empeño",
+                        """
+                        <html><body style="font-family:Arial,sans-serif">
+                        <h2>Estado actualizado</h2>
+                        <p>Hola %s, tu solicitud #%d ha sido actualizada a estado: <b>%s</b>.</p>
+                        </body></html>
+                        """.formatted(
+                                la.getUser().getFirstName(),
+                                la.getLoanApplicationID(),
+                                newStatus.toUpperCase()
+                        )
+                    );
+                } catch (MessagingException e) {
+                    log.error("Error enviando correo de actualización de estado", e);
+                    return ResponseEntity.status(500).body(Map.of(
+                            "error", "No se pudo enviar el correo de notificación",
+                            "detalle", e.getMessage()
+                    ));
+                }
+
+                return ResponseEntity.ok(Map.of(
+                        "message", "Estado actualizado a " + newStatus.toUpperCase(),
+                        "loanApplicationID", la.getLoanApplicationID()
+                ));
+            })
+            .orElse(ResponseEntity.notFound().build());
     }
 }
