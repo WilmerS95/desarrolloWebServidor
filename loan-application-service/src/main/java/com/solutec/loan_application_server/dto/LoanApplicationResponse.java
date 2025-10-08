@@ -9,6 +9,7 @@ public record LoanApplicationResponse(
         String itemName,
         String brand,
         Integer quantityPayments,
+        Double requestedAmount,
         LocalDateTime applicationDate,
         String status,
         List<String> photoUrls

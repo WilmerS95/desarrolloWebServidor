@@ -60,11 +60,11 @@ public class LoanApplicationController {
     @GetMapping("/admin-emails")
     public List<String> getAdminEmails() {
         return userRepository.findAll().stream()
-                .filter(u -> u.getRole() != null &&
-                        (u.getRole().getRoleName().equalsIgnoreCase("ADMIN")
-                                || u.getRole().getRoleName().equalsIgnoreCase("SUPER_ADMIN")))
-                .map(User::getEmail)
-                .toList();
+            .filter(u -> u.getRole() != null &&
+                    (u.getRole().getRoleName().equalsIgnoreCase("ADMIN")
+                            || u.getRole().getRoleName().equalsIgnoreCase("SUPER_ADMIN")))
+            .map(User::getEmail)
+            .toList();
     }
 
     @GetMapping("/categories")
@@ -115,7 +115,7 @@ public class LoanApplicationController {
         la.setItem(item);
         la.setQuantityPayments(data.getQuantityPayments());
         la.setApplicationDate(LocalDateTime.now());
-        la.setStatus("PENDING");
+        la.setStatus("PENDIENTE");
         la = loanApplicationRepository.save(la);
 
         try{
@@ -153,6 +153,7 @@ public class LoanApplicationController {
                 item.getNameItem(),
                 item.getBrand(),
                 la.getQuantityPayments(),
+                la.getRequestedAmount(),
                 la.getApplicationDate(),
                 la.getStatus(),
                 photoUrls
@@ -264,6 +265,33 @@ public class LoanApplicationController {
         );
     }
 
+    @PutMapping("/admin/accept/{id}")
+    public ResponseEntity<?> acceptLoanApplication(@PathVariable Long id) {
+        return updateStatusWithOptionalComment(id, "ACEPTADO", null);
+    }
+
+    @PutMapping("/admin/reject/{id}")
+    public ResponseEntity<?> rejectLoanApplication(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+        String comment = body.get("comment");
+        if (comment == null || comment.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "El motivo es obligatorio para rechazar una solicitud"));
+        }
+        return updateStatusWithOptionalComment(id, "RECHAZADO", comment);
+    }
+
+    @PutMapping("/admin/counteroffer/{id}")
+    public ResponseEntity<?> counterOfferLoanApplication(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+        String comment = body.get("comment");
+        if (comment == null || comment.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "El motivo es obligatorio para enviar una contraoferta"));
+        }
+        return updateStatusWithOptionalComment(id, "CONTRAOFERTADO", comment);
+    }
+
     @GetMapping("/admin/all")
     public ResponseEntity<List<LoanApplicationResponse>> getAllApplications() {
         List<LoanApplicationResponse> list = loanApplicationRepository.findAll()
@@ -279,6 +307,7 @@ public class LoanApplicationController {
                         la.getItem().getNameItem(),
                         la.getItem().getBrand(),
                         la.getQuantityPayments(),
+                        la.getRequestedAmount(),
                         la.getApplicationDate(),
                         la.getStatus(),
                         photoUrls
@@ -303,6 +332,7 @@ public class LoanApplicationController {
                         la.getItem().getNameItem(),
                         la.getItem().getBrand(),
                         la.getQuantityPayments(),
+                        la.getRequestedAmount(),
                         la.getApplicationDate(),
                         la.getStatus(),
                         photoUrls
@@ -358,4 +388,50 @@ public class LoanApplicationController {
             })
             .orElse(ResponseEntity.notFound().build());
     }
+
+    private ResponseEntity<?> updateStatusWithOptionalComment(Long id, String newStatus, String comment) {
+        return loanApplicationRepository.findById(id)
+            .map(la -> {
+                la.setStatus(newStatus);
+                loanApplicationRepository.save(la);
+
+                try {
+                    String subject = "Actualización de tu solicitud de empeño";
+                    String message = """
+                <html><body style="font-family:Arial,sans-serif">
+                <h2>Estado actualizado</h2>
+                <p>Hola %s, tu solicitud #%d ha sido actualizada a estado: <b>%s</b>.</p>
+                %s
+                <p>Gracias por usar nuestros servicios.</p>
+                </body></html>
+                """.formatted(
+                            la.getUser().getFirstName(),
+                            la.getLoanApplicationID(),
+                            newStatus,
+                            (comment != null ? "<p><b>Motivo:</b> " + comment + "</p>" : "")
+                    );
+
+                    emailService.sendEmail(
+                            la.getUser().getEmail(),
+                            subject,
+                            message
+                    );
+
+                } catch (Exception e) {
+                    log.error("Error enviando correo de actualización de estado", e);
+                    return ResponseEntity.status(500).body(Map.of(
+                            "error", "No se pudo enviar el correo de notificación",
+                            "detalle", e.getMessage()
+                    ));
+                }
+
+                return ResponseEntity.ok(Map.of(
+                        "message", "Solicitud actualizada a estado " + newStatus,
+                        "loanApplicationID", la.getLoanApplicationID()
+                ));
+            })
+            .orElse(ResponseEntity.status(404)
+                    .body(Map.of("message", "Solicitud no encontrada con ID " + id)));
+    }
+
 }

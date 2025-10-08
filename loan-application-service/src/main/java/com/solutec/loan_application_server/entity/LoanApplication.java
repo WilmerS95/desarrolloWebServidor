@@ -23,6 +23,9 @@ public class LoanApplication {
     @Column(name = "quantityPayments")
     private Integer quantityPayments;
 
+    @Column(name = "requestedAmount")
+    private Double requestedAmount;
+
     @Column(name = "applicationDate")
     private java.time.LocalDateTime applicationDate;
 
