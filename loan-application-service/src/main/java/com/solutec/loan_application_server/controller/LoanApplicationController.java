@@ -9,8 +9,7 @@ import jakarta.mail.MessagingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -40,6 +39,9 @@ public class LoanApplicationController {
 
     @Autowired
     private LoanRepository loanRepository;
+
+    @Autowired
+    private ContractGenerationService contractGenerationService;
 
     @GetMapping
     public String getLoans(Authentication authentication) {
@@ -578,11 +580,23 @@ public class LoanApplicationController {
         loan.setInterestRate(new BigDecimal("5.00")); // 5% mensual
         loan.setTerm(app.getQuantityPayments());
 
-        // Calcular fecha de vencimiento (último pago + 30 días de gracia)
         loan.setDueDate(LocalDateTime.now().plusDays(30L * (app.getQuantityPayments() + 1)));
 
         loan.setStatus("ACTIVO");
         loan.setBalance(BigDecimal.valueOf(app.getApprovedAmount()));
+
+        loan.setContractNumber(contractGenerationService.generateContractNumber());
+        loan.setContractSignatureHash(
+                contractGenerationService.generateSignatureHash(
+                        loan.getContractNumber(),
+                        app.getUser().getUserID(),
+                        LocalDateTime.now()
+                )
+        );
+        loan.setContractGeneratedDate(LocalDateTime.now());
+        loan.setLatePaymentFee(new BigDecimal("50.00")); // Mora diaria
+        loan.setGracePeriodDays(30); // 30 días de gracia
+        loan.setDefaultDays(90); // 90 días para considerar incumplimiento
 
         return loanRepository.save(loan);
     }
@@ -941,6 +955,78 @@ public class LoanApplicationController {
         } catch (Exception e) {
             log.error("Error obteniendo contratos", e);
             return ResponseEntity.status(500).body(Map.of("error", "Error interno"));
+        }
+    }
+
+    @GetMapping("/my-history/{id}/contract-html")
+    public ResponseEntity<?> getContractHtml(
+            @PathVariable Long id,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        try {
+            Object userIdObj = jwt.getClaims().get("userId");
+            if (userIdObj == null) {
+                return ResponseEntity.status(401).body("No autorizado");
+            }
+
+            Long userId = (userIdObj instanceof Number)
+                    ? ((Number) userIdObj).longValue()
+                    : Long.parseLong(userIdObj.toString());
+
+            Optional<LoanApplication> appOpt = loanApplicationRepository.findById(id);
+            if (appOpt.isEmpty()) {
+                return ResponseEntity.status(404).body("Solicitud no encontrada");
+            }
+
+            LoanApplication app = appOpt.get();
+
+            if (!app.getUser().getUserID().equals(userId)) {
+                return ResponseEntity.status(403).body("No autorizado");
+            }
+
+            Optional<Loan> loanOpt = loanRepository.findByLoanApplicationLoanApplicationID(id);
+            if (loanOpt.isEmpty()) {
+                return ResponseEntity.status(404).body("No existe contrato para esta solicitud");
+            }
+
+            Loan loan = loanOpt.get();
+
+            // Si no tiene contrato generado, generarlo ahora
+            if (loan.getContractNumber() == null || loan.getContractSignatureHash() == null) {
+                loan.setContractNumber(contractGenerationService.generateContractNumber());
+                loan.setContractSignatureHash(
+                        contractGenerationService.generateSignatureHash(
+                                loan.getContractNumber(),
+                                userId,
+                                LocalDateTime.now()
+                        )
+                );
+                loan.setContractGeneratedDate(LocalDateTime.now());
+                loanRepository.save(loan);
+            }
+
+            List<ProposedInstallment> installments = proposedInstallmentRepository
+                    .findByLoanApplicationLoanApplicationIDOrderByInstallmentNumber(id);
+
+            String contractHtml = contractGenerationService.generateContractHtml(
+                    loan,
+                    app,
+                    app.getUser(),
+                    app.getItem(),
+                    installments
+            );
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.TEXT_HTML);
+            headers.set("Content-Disposition", "inline; filename=contrato-" + loan.getContractNumber() + ".html");
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(contractHtml);
+
+        } catch (Exception e) {
+            log.error("Error generando contrato HTML", e);
+            return ResponseEntity.status(500).body("Error generando contrato: " + e.getMessage());
         }
     }
 }

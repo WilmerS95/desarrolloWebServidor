@@ -1,9 +1,7 @@
 package com.solutec.loan_application_server.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -25,7 +23,7 @@ public class Loan {
     private LocalDateTime approvalDate;
 
     @Lob
-    @Column(name = "agreement")
+    @Column(name = "agreement", columnDefinition = "BLOB")
     private byte[] agreement;
 
     @Column(name = "loanAmount", precision = 18, scale = 2)
@@ -45,4 +43,22 @@ public class Loan {
 
     @Column(name = "balance", precision = 18, scale = 2)
     private BigDecimal balance;
+
+    @Column(name = "contractNumber", length = 50, unique = true)
+    private String contractNumber;
+
+    @Column(name = "contractSignatureHash", length = 200)
+    private String contractSignatureHash;
+
+    @Column(name = "contractGeneratedDate")
+    private LocalDateTime contractGeneratedDate;
+
+    @Column(name = "latePaymentFee", precision = 10, scale = 2)
+    private BigDecimal latePaymentFee = new BigDecimal("50.00");
+
+    @Column(name = "gracePeriodDays")
+    private Integer gracePeriodDays = 30;
+
+    @Column(name = "defaultDays")
+    private Integer defaultDays = 90;
 }

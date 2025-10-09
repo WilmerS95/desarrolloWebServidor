@@ -1,66 +1,57 @@
 package com.solutec.loan_application_server.service;
 
-import com.solutec.loan_application_server.client.BusinessParameterClient;
 import com.solutec.loan_application_server.entity.ProposedInstallment;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 @Service
-@Slf4j
 public class InstallmentCalculationService {
 
-    @Autowired
-    private BusinessParameterClient parameterClient;
+    private static final BigDecimal INTEREST_RATE = new BigDecimal("0.05");
 
-    public List<ProposedInstallment> calculateInstallments(
-            Double principal,
-            Integer numberOfInstallments) {
+    public List<ProposedInstallment> calculateInstallments(Double principal, Integer numberOfPayments) {
+        BigDecimal amount = BigDecimal.valueOf(principal);
+        BigDecimal totalInterest = amount.multiply(INTEREST_RATE)
+                .multiply(BigDecimal.valueOf(numberOfPayments));
+        BigDecimal totalAmount = amount.add(totalInterest);
+        BigDecimal installmentAmount = totalAmount.divide(
+                BigDecimal.valueOf(numberOfPayments),
+                2,
+                RoundingMode.HALF_UP
+        );
 
         List<ProposedInstallment> installments = new ArrayList<>();
-        BigDecimal principalAmount = BigDecimal.valueOf(principal);
+        LocalDate today = LocalDate.now();
+        int dayOfMonth = today.getDayOfMonth();
 
-        BigDecimal monthlyRate = getMonthlyInterestRate();
-
-        BigDecimal totalInterest = principalAmount
-                .multiply(monthlyRate)
-                .multiply(BigDecimal.valueOf(numberOfInstallments));
-
-        BigDecimal totalAmount = principalAmount.add(totalInterest);
-
-        BigDecimal installmentAmount = totalAmount
-                .divide(BigDecimal.valueOf(numberOfInstallments), 2, RoundingMode.HALF_UP);
-
-        LocalDateTime baseDate = LocalDateTime.now();
-        for (int i = 1; i <= numberOfInstallments; i++) {
+        for (int i = 1; i <= numberOfPayments; i++) {
             ProposedInstallment installment = new ProposedInstallment();
             installment.setInstallmentNumber(i);
             installment.setAmount(installmentAmount);
-            installment.setDueDate(baseDate.plusDays(30L * i));
+
+            LocalDate dueDate = calculateDueDate(today, i, dayOfMonth);
+            installment.setDueDate(dueDate.atStartOfDay());
+
             installments.add(installment);
         }
 
         return installments;
     }
 
-    private BigDecimal getMonthlyInterestRate() {
-        try {
-            Map<String, String> response = parameterClient.getParameterValue("INTEREST_RATE_MONTHLY");
-            String value = response.get("value");
-            if (value != null) {
-                return new BigDecimal(value).divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP);
-            }
-        } catch (Exception e) {
-            log.error("Error fetching interest rate from parameter service, using default", e);
+    private LocalDate calculateDueDate(LocalDate startDate, int monthsToAdd, int preferredDayOfMonth) {
+        LocalDate targetDate = startDate.plusMonths(monthsToAdd);
+        int lastDayOfMonth = targetDate.lengthOfMonth();
+
+        if (preferredDayOfMonth <= lastDayOfMonth) {
+            return targetDate.withDayOfMonth(preferredDayOfMonth);
+        } else {
+            return targetDate.plusMonths(1).withDayOfMonth(1);
         }
-        return new BigDecimal("0.05"); // 5%
     }
 
     public BigDecimal getTotalAmount(List<ProposedInstallment> installments) {
