@@ -15,7 +15,8 @@ public class FirebaseConfig {
     public void init() throws IOException {
         if (FirebaseApp.getApps().isEmpty()) {
             try (InputStream serviceAccount =
-                         getClass().getResourceAsStream("/solutec-pawn-firebase-adminsdk-fbsvc-0f38213e82.json")) {
+                         //getClass().getResourceAsStream("/solutec-pawn-firebase-adminsdk-fbsvc-0f38213e82.json")) {
+                         getClass().getResourceAsStream("/solutec-pawn-firebase-adminsdk-fbsvc-174b67c8ce.json")) {
 
                 FirebaseOptions options = FirebaseOptions.builder()
                         .setCredentials(GoogleCredentials.fromStream(serviceAccount))

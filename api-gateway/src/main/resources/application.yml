@@ -32,7 +32,12 @@ spring:
           uri: http://192.168.1.36:8082
           predicates:
             - Path=/admin/users/**
-
+        - id: business-parameter-service
+          uri: http://192.168.116.57:8084
+          predicates:
+            - Path=/business-parameters/**
+          filters:
+            - StripPrefix=1
 eureka:
   client:
     register-with-eureka: true

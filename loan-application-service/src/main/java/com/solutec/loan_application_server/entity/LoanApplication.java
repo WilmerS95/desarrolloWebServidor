@@ -3,9 +3,13 @@ package com.solutec.loan_application_server.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.List;
+
 @Entity
-@Getter
-@Setter
+@Table(name = "LoanApplication")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class LoanApplication {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,4 +35,10 @@ public class LoanApplication {
 
     @Column(name = "status")
     private String status;
+
+    private Double approvedAmount;
+    private Boolean clientAccepted = false;
+
+    @OneToMany(mappedBy = "loanApplication", cascade = CascadeType.ALL)
+    private List<ProposedInstallment> proposedInstallments;
 }

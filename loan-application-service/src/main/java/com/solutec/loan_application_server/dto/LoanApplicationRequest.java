@@ -12,4 +12,5 @@ public class LoanApplicationRequest {
     private String specification;
     private Integer quantityPayments;
     private Long categoryId;
+    private Double requestedAmount;
 }
