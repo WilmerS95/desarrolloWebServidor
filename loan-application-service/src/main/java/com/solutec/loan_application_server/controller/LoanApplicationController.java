@@ -733,4 +733,99 @@ public class LoanApplicationController {
         }
         throw new RuntimeException("No se pudo extraer el userId del token");
     }
+
+    @GetMapping("/my-history")
+    public ResponseEntity<List<LoanApplicationResponse>> getMyApplicationHistory(
+            @AuthenticationPrincipal Jwt jwt) {
+
+        try {
+            Object userIdObj = jwt.getClaims().get("userId");
+            if (userIdObj == null) {
+                return ResponseEntity.status(401).body(null);
+            }
+
+            Long userId = (userIdObj instanceof Number)
+                    ? ((Number) userIdObj).longValue()
+                    : Long.parseLong(userIdObj.toString());
+
+            List<LoanApplication> applications = loanApplicationRepository
+                    .findByUser_UserIDOrderByApplicationDateDesc(userId);
+
+            List<LoanApplicationResponse> response = applications.stream()
+                    .map(la -> {
+                        List<String> photoUrls = itemPhotoRepository.findByItem(la.getItem())
+                                .stream()
+                                .map(ItemPhoto::getPhotoPath)
+                                .toList();
+
+                        return new LoanApplicationResponse(
+                                la.getLoanApplicationID(),
+                                la.getItem().getItemID(),
+                                la.getItem().getNameItem(),
+                                la.getItem().getBrand(),
+                                la.getQuantityPayments(),
+                                la.getRequestedAmount(),
+                                la.getApplicationDate(),
+                                la.getStatus(),
+                                photoUrls
+                        );
+                    })
+                    .toList();
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error obteniendo historial de solicitudes", e);
+            return ResponseEntity.status(500).body(null);
+        }
+    }
+
+    @GetMapping("/my-history/{id}")
+    public ResponseEntity<?> getMyApplication(
+            @PathVariable Long id,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        try {
+            Object userIdObj = jwt.getClaims().get("userId");
+            if (userIdObj == null) {
+                return ResponseEntity.status(401).body(Map.of("error", "No autorizado"));
+            }
+
+            Long userId = (userIdObj instanceof Number)
+                    ? ((Number) userIdObj).longValue()
+                    : Long.parseLong(userIdObj.toString());
+
+            return loanApplicationRepository.findById(id)
+                    .map(la -> {
+                        if (!la.getUser().getUserID().equals(userId)) {
+                            return ResponseEntity.status(403)
+                                    .body(Map.of("error", "No tienes permiso para ver esta solicitud"));
+                        }
+
+                        List<String> photoUrls = itemPhotoRepository.findByItem(la.getItem())
+                                .stream()
+                                .map(ItemPhoto::getPhotoPath)
+                                .toList();
+
+                        return ResponseEntity.ok(
+                                new LoanApplicationResponse(
+                                        la.getLoanApplicationID(),
+                                        la.getItem().getItemID(),
+                                        la.getItem().getNameItem(),
+                                        la.getItem().getBrand(),
+                                        la.getQuantityPayments(),
+                                        la.getRequestedAmount(),
+                                        la.getApplicationDate(),
+                                        la.getStatus(),
+                                        photoUrls
+                                )
+                        );
+                    })
+                    .orElse(ResponseEntity.notFound().build());
+
+        } catch (Exception e) {
+            log.error("Error obteniendo solicitud", e);
+            return ResponseEntity.status(500).body(Map.of("error", "Error interno"));
+        }
+    }
 }

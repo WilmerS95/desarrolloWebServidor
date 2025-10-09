@@ -1,6 +1,13 @@
 package com.solutec.loan_application_server.repository;
 
 import com.solutec.loan_application_server.entity.LoanApplication;
+import com.solutec.loan_application_server.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface LoanApplicationRepository extends JpaRepository<LoanApplication, Long> {}
+import java.util.List;
+
+public interface LoanApplicationRepository extends JpaRepository<LoanApplication, Long> {
+    List<LoanApplication> findByUserOrderByApplicationDateDesc(User user);
+
+    List<LoanApplication> findByUser_UserIDOrderByApplicationDateDesc(Long userId);
+}
