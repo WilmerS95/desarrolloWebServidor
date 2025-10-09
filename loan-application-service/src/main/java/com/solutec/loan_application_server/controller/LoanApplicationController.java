@@ -828,4 +828,119 @@ public class LoanApplicationController {
             return ResponseEntity.status(500).body(Map.of("error", "Error interno"));
         }
     }
+
+    @GetMapping("/my-history/{id}/contract")
+    public ResponseEntity<?> getMyContract(
+            @PathVariable Long id,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        try {
+            Object userIdObj = jwt.getClaims().get("userId");
+            if (userIdObj == null) {
+                return ResponseEntity.status(401).body(Map.of("error", "No autorizado"));
+            }
+
+            Long userId = (userIdObj instanceof Number)
+                    ? ((Number) userIdObj).longValue()
+                    : Long.parseLong(userIdObj.toString());
+
+            Optional<LoanApplication> appOpt = loanApplicationRepository.findById(id);
+            if (appOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            LoanApplication app = appOpt.get();
+
+            if (!app.getUser().getUserID().equals(userId)) {
+                return ResponseEntity.status(403).body(Map.of("error", "No autorizado"));
+            }
+
+            Optional<Loan> loanOpt = loanRepository.findByLoanApplicationLoanApplicationID(id);
+            if (loanOpt.isEmpty()) {
+                return ResponseEntity.status(404)
+                        .body(Map.of("error", "No se encontró contrato para esta solicitud"));
+            }
+
+            Loan loan = loanOpt.get();
+
+            List<ProposedInstallment> installments = proposedInstallmentRepository
+                    .findByLoanApplicationLoanApplicationIDOrderByInstallmentNumber(id);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("loanId", loan.getLoanId());
+            response.put("loanApplicationId", app.getLoanApplicationID());
+            response.put("itemName", app.getItem().getNameItem());
+            response.put("approvalDate", loan.getApprovalDate());
+            response.put("loanAmount", loan.getLoanAmount());
+            response.put("interestRate", loan.getInterestRate());
+            response.put("term", loan.getTerm());
+            response.put("dueDate", loan.getDueDate());
+            response.put("status", loan.getStatus());
+            response.put("balance", loan.getBalance());
+            response.put("installments", installments.stream().map(inst -> {
+                Map<String, Object> instMap = new HashMap<>();
+                instMap.put("installmentNumber", inst.getInstallmentNumber());
+                instMap.put("amount", inst.getAmount());
+                instMap.put("dueDate", inst.getDueDate());
+                instMap.put("status", "PENDIENTE");
+                return instMap;
+            }).toList());
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error obteniendo contrato", e);
+            return ResponseEntity.status(500).body(Map.of("error", "Error interno"));
+        }
+    }
+
+    @GetMapping("/my-contracts")
+    public ResponseEntity<?> getMyContracts(@AuthenticationPrincipal Jwt jwt) {
+        try {
+            Object userIdObj = jwt.getClaims().get("userId");
+            if (userIdObj == null) {
+                return ResponseEntity.status(401).body(Map.of("error", "No autorizado"));
+            }
+
+            Long userId = (userIdObj instanceof Number)
+                    ? ((Number) userIdObj).longValue()
+                    : Long.parseLong(userIdObj.toString());
+
+            List<LoanApplication> applications = loanApplicationRepository
+                    .findByUser_UserIDOrderByApplicationDateDesc(userId)
+                    .stream()
+                    .filter(app -> "CLIENTE_ACEPTO".equals(app.getStatus()))
+                    .toList();
+
+            List<Map<String, Object>> contracts = new ArrayList<>();
+
+            for (LoanApplication app : applications) {
+                Optional<Loan> loanOpt = loanRepository
+                        .findByLoanApplicationLoanApplicationID(app.getLoanApplicationID());
+
+                if (loanOpt.isPresent()) {
+                    Loan loan = loanOpt.get();
+
+                    Map<String, Object> contractMap = new HashMap<>();
+                    contractMap.put("loanId", loan.getLoanId());
+                    contractMap.put("loanApplicationId", app.getLoanApplicationID());
+                    contractMap.put("itemName", app.getItem().getNameItem());
+                    contractMap.put("itemBrand", app.getItem().getBrand());
+                    contractMap.put("loanAmount", loan.getLoanAmount());
+                    contractMap.put("approvalDate", loan.getApprovalDate());
+                    contractMap.put("status", loan.getStatus());
+                    contractMap.put("balance", loan.getBalance());
+                    contractMap.put("term", loan.getTerm());
+
+                    contracts.add(contractMap);
+                }
+            }
+
+            return ResponseEntity.ok(contracts);
+
+        } catch (Exception e) {
+            log.error("Error obteniendo contratos", e);
+            return ResponseEntity.status(500).body(Map.of("error", "Error interno"));
+        }
+    }
 }
