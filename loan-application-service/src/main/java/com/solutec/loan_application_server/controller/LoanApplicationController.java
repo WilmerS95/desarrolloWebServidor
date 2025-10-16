@@ -249,7 +249,7 @@ public class LoanApplicationController {
                                             <h3 style="color:#2C3E50; text-align:center;">Fotos del artículo</h3>
                                             <div style="text-align:center;">%s</div>
                                             <div style="text-align:center; margin-top:30px;">
-                                                <a href="http://192.168.116.57:4200/admin/solicitudes/%d" style="
+                                                <a href="http://192.168.1.34:4200/admin/solicitudes/%d" style="
                                                     display:inline-block;
                                                     padding:15px 30px;
                                                     font-size:16px;
@@ -666,7 +666,7 @@ public class LoanApplicationController {
                     </div>
                     
                     <div style="text-align:center; margin-top:30px;">
-                        <a href="http://192.168.116.57:4200/loan-application/%d/accept" 
+                        <a href="http://192.168.1.34:4200/loan-application/%d/accept" 
                            style="background-color:#28a745; color:white; padding:15px 30px; text-decoration:none; border-radius:5px; display:inline-block;">
                             Aceptar plan de cuotas
                         </a>

@@ -44,6 +44,7 @@ public class GatewaySecurityConfig {
                 config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
                 config.setAllowedHeaders(List.of("*"));
                 config.setAllowCredentials(true);
+                config.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
                 config.setMaxAge(3600L);
                 return config;
             }));
