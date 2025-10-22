@@ -5,17 +5,18 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+@Getter
+@Setter
 @Entity
-@Table(name = "loan")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+@Table(name = "Loan")
 public class Loan {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "loanId")
     private Long loanId;
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "loanApplicationId", nullable = false)
     private LoanApplication loanApplication;
 
@@ -23,7 +24,7 @@ public class Loan {
     private LocalDateTime approvalDate;
 
     @Lob
-    @Column(name = "agreement", columnDefinition = "BLOB")
+    @Column(name = "agreement", columnDefinition = "LONGBLOB")
     private byte[] agreement;
 
     @Column(name = "loanAmount", precision = 18, scale = 2)
@@ -56,8 +57,14 @@ public class Loan {
     @Column(name = "latePaymentFee", precision = 10, scale = 2)
     private BigDecimal latePaymentFee = new BigDecimal("50.00");
 
+    @Column(name = "totalInterest", precision = 18, scale = 2)
+    private BigDecimal totalInterest;
+
+    @Column(name = "totalAmount", precision = 18, scale = 2)
+    private BigDecimal totalAmount;
+
     @Column(name = "gracePeriodDays")
-    private Integer gracePeriodDays = 30;
+    private Integer gracePeriodDays;
 
     @Column(name = "defaultDays")
     private Integer defaultDays = 90;

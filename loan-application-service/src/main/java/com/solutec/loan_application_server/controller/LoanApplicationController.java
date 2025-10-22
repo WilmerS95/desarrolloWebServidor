@@ -601,7 +601,7 @@ public class LoanApplicationController {
         loan.setContractGeneratedDate(LocalDateTime.now());
         loan.setLatePaymentFee(new BigDecimal("50.00")); // Mora diaria
         loan.setGracePeriodDays(30); // 30 días de gracia
-        loan.setDefaultDays(90); // 90 días para considerar incumplimiento
+        //loan.setDefaultDays(90); // 90 días para considerar incumplimiento
 
         return loanRepository.save(loan);
     }
