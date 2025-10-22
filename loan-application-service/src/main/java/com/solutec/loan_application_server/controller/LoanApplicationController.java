@@ -9,6 +9,7 @@ import jakarta.mail.MessagingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -47,6 +48,9 @@ public class LoanApplicationController {
     public String getLoans(Authentication authentication) {
         return "Acceso a préstamos autorizado para usuario Loan: " + authentication.getName();
     }
+
+    @Value("${frontend.base-url}")
+    private String frontendBaseUrl;
 
     private final FirebaseStorageService storageService;
     private final ItemRepository itemRepository;
@@ -249,7 +253,7 @@ public class LoanApplicationController {
                                             <h3 style="color:#2C3E50; text-align:center;">Fotos del artículo</h3>
                                             <div style="text-align:center;">%s</div>
                                             <div style="text-align:center; margin-top:30px;">
-                                                <a href="http://192.168.1.34:4200/admin/solicitudes/%d" style="
+                                                <a href="%s/admin/solicitudes/%d" style="
                                                     display:inline-block;
                                                     padding:15px 30px;
                                                     font-size:16px;
@@ -281,6 +285,7 @@ public class LoanApplicationController {
                 item.getBrand(),
                 la.getQuantityPayments(),
                 photos.toString(),
+                frontendBaseUrl,
                 la.getLoanApplicationID()
         );
     }
@@ -666,7 +671,7 @@ public class LoanApplicationController {
                     </div>
                     
                     <div style="text-align:center; margin-top:30px;">
-                        <a href="http://192.168.1.34:4200/loan-application/%d/accept" 
+                        <a href="%s/loan-application/%d/accept" 
                            style="background-color:#28a745; color:white; padding:15px 30px; text-decoration:none; border-radius:5px; display:inline-block;">
                             Aceptar plan de cuotas
                         </a>
@@ -684,6 +689,7 @@ public class LoanApplicationController {
                 installments.size(),
                 total,
                 installmentDetails.toString(),
+                frontendBaseUrl,
                 app.getLoanApplicationID()
         );
 

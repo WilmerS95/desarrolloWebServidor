@@ -5,9 +5,11 @@ import com.solutec.auth_service.repository.PermissionRepository;
 import com.solutec.auth_service.repository.RolePermissionRepository;
 import com.solutec.auth_service.repository.RoleRepository;
 import jakarta.annotation.PostConstruct;
-import lombok.*;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -20,6 +22,7 @@ public class DataLoader {
     private final RolePermissionRepository rolePermissionRepository;
 
     @PostConstruct
+    @Transactional
     public void loadInitialData() {
         // Permisos
         Permission viewItems = createPermissionIfNotExists("VIEW_ITEMS");
@@ -32,16 +35,16 @@ public class DataLoader {
         Permission approveLoans = createPermissionIfNotExists("APPROVE_LOANS");
         Permission viewAllOrders = createPermissionIfNotExists("VIEW_ALL_ORDERS");
         Permission managePromotions = createPermissionIfNotExists("MANAGE_PROMOTIONS");
+        Permission allPermission = createPermissionIfNotExists("ALL_PERMISSION");
 
-        // Crear roles
-        Role clienteRole = createRoleIfNotExists(2L, "CLIENTE");
-        Role adminRole = createRoleIfNotExists(1L, "ADMIN");
-        Role saRole = createRoleIfNotExists(3L, "SA");
+        Role clienteRole = createRoleIfNotExists("CLIENTE");
+        Role adminRole = createRoleIfNotExists("ADMIN");
+        Role saRole = createRoleIfNotExists("SA");
 
         assignPermissionsToRole(clienteRole, Set.of(viewItems, createOrder, viewOwnLoans, uploadDocument));
         assignPermissionsToRole(adminRole, Set.of(viewItems, createOrder, viewOwnLoans, uploadDocument,
                 manageUsers, manageItems, approveLoans, viewAllOrders, managePromotions));
-        assignPermissionsToRole(saRole, permissionRepository.findAll().stream().collect(Collectors.toSet()));
+        assignPermissionsToRole(saRole, new HashSet<>(permissionRepository.findAll()));
     }
 
     private Permission createPermissionIfNotExists(String name) {
@@ -53,11 +56,10 @@ public class DataLoader {
                 });
     }
 
-    private Role createRoleIfNotExists(Long id, String name) {
-        return roleRepository.findById(id)
+    private Role createRoleIfNotExists(String name) {
+        return roleRepository.findByRoleName(name)
                 .orElseGet(() -> {
                     Role role = new Role();
-                    role.setRoleId(id);
                     role.setRoleName(name);
                     return roleRepository.save(role);
                 });
@@ -65,10 +67,16 @@ public class DataLoader {
 
     private void assignPermissionsToRole(Role role, Set<Permission> permissions) {
         for (Permission p : permissions) {
-            RolePermission rp = new RolePermission();
-            rp.setRole(role);
-            rp.setPermission(p);
-            rolePermissionRepository.save(rp);
+            boolean exists = rolePermissionRepository.findAll().stream()
+                    .anyMatch(rp -> rp.getRole().getRoleId().equals(role.getRoleId())
+                            && rp.getPermission().getPermissionId().equals(p.getPermissionId()));
+
+            if (!exists) {
+                RolePermission rp = new RolePermission();
+                rp.setRole(role);
+                rp.setPermission(p);
+                rolePermissionRepository.save(rp);
+            }
         }
     }
 }
