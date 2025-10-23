@@ -3,13 +3,15 @@ package com.solutec.loan_application_server.service;
 import com.solutec.loan_application_server.dto.*;
 import com.solutec.loan_application_server.entity.*;
 import com.solutec.loan_application_server.repository.*;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -20,182 +22,166 @@ import java.util.stream.Collectors;
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
-    private final PaymentScheduleRepository paymentScheduleRepository;
     private final LoanRepository loanRepository;
-    private final NotificationService notificationService;
-    private final EmailService emailService;
+    private final PaymentScheduleRepository paymentScheduleRepository;
+    private final ProposedInstallmentRepository proposedInstallmentRepository;
 
-    /**
-     * Cliente reporta un pago
-     */
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
     @Transactional
     public PaymentDTO reportPayment(PaymentRequestDTO request) {
-        // Validar préstamo existe
         Loan loan = loanRepository.findById(request.getLoanId())
                 .orElseThrow(() -> new RuntimeException("Préstamo no encontrado"));
 
-        // Validar que el número de pago sea válido
-        List<PaymentSchedule> schedules = paymentScheduleRepository
-                .findByLoan_LoanIdAndPaymentNumber(request.getLoanId(), request.getPaymentNumber());
-
-        if (schedules.isEmpty()) {
-            throw new RuntimeException("Número de pago inválido");
-        }
-
-        PaymentSchedule schedule = schedules.get(0);
-
-        // Crear nuevo pago con estado PENDIENTE
         Payment payment = new Payment();
         payment.setLoan(loan);
         payment.setPaymentNumber(request.getPaymentNumber());
-        payment.setPaymentDate(LocalDateTime.now());
         payment.setAmountPaid(request.getAmountPaid());
         payment.setPaymentMethod(request.getPaymentMethod());
-        payment.setStatus("PENDIENTE");
+        payment.setPaymentDate(LocalDateTime.now());
+        payment.setStatus("PENDING");
 
-        // Guardar comprobante si existe
         if (request.getReferenceBase64() != null && !request.getReferenceBase64().isEmpty()) {
             try {
-                payment.setReference(Base64.getDecoder().decode(request.getReferenceBase64()));
+                byte[] referenceBytes = Base64.getDecoder().decode(request.getReferenceBase64());
+                payment.setReference(referenceBytes);
             } catch (Exception e) {
-                log.error("Error decodificando imagen de referencia", e);
+                log.error("Error decodificando referencia base64", e);
             }
         }
 
         payment = paymentRepository.save(payment);
 
-        // Enviar notificación al cliente
-        notificationService.notifyPaymentReported(loan.getLoanApplication().getUser(), payment);
-
-        log.info("Pago reportado: {} para préstamo {}", payment.getPaymentId(), loan.getLoanId());
-
-        return convertToDTO(payment);
+        log.info("Pago reportado exitosamente: {}", payment.getPaymentId());
+        return convertToPaymentDTO(payment);
     }
 
-    /**
-     * Administrador revisa y aprueba/rechaza un pago
-     */
     @Transactional
     public PaymentDTO reviewPayment(PaymentReviewDTO reviewDTO, Long adminUserId) {
         Payment payment = paymentRepository.findById(reviewDTO.getPaymentId())
                 .orElseThrow(() -> new RuntimeException("Pago no encontrado"));
 
-        if (!"PENDIENTE".equals(payment.getStatus())) {
-            throw new RuntimeException("Este pago ya fue revisado");
-        }
-
         payment.setStatus(reviewDTO.getStatus());
         payment.setReviewComment(reviewDTO.getComment());
-        payment.setReviewedBy(adminUserId);
         payment.setReviewDate(LocalDateTime.now());
+        payment.setReviewedBy(adminUserId);
 
-        if ("APROBADO".equals(reviewDTO.getStatus())) {
-            // Aplicar el pago al préstamo
-            applyPaymentToLoan(payment);
+        if ("APPROVED".equals(reviewDTO.getStatus())) {
+            Loan loan = payment.getLoan();
+
+            BigDecimal currentBalance = loan.getBalance() != null ? loan.getBalance() : BigDecimal.ZERO;
+            BigDecimal newBalance = currentBalance.subtract(payment.getAmountPaid());
+            loan.setBalance(newBalance.max(BigDecimal.ZERO));
+
+            if (newBalance.compareTo(BigDecimal.ZERO) <= 0) {
+                loan.setStatus("PAID");
+            }
+
+            loanRepository.save(loan);
+
+            updatePaymentSchedule(loan.getLoanId(), payment.getPaymentNumber(), payment.getAmountPaid());
         }
 
         payment = paymentRepository.save(payment);
+        log.info("Pago {} revisado como {}", payment.getPaymentId(), payment.getStatus());
 
-        // Notificar al cliente sobre la revisión
-        notificationService.notifyPaymentReviewed(
-                payment.getLoan().getLoanApplication().getUser(),
-                payment
-        );
-
-        log.info("Pago {} revisado por admin {}: {}",
-                payment.getPaymentId(), adminUserId, reviewDTO.getStatus());
-
-        return convertToDTO(payment);
+        return convertToPaymentDTO(payment);
     }
 
-    /**
-     * Aplica el pago al préstamo y actualiza el estado de cuenta
-     */
-    private void applyPaymentToLoan(Payment payment) {
-        Loan loan = payment.getLoan();
-        PaymentSchedule schedule = paymentScheduleRepository
-                .findByLoan_LoanIdAndPaymentNumber(loan.getLoanId(), payment.getPaymentNumber())
-                .stream().findFirst()
-                .orElseThrow(() -> new RuntimeException("Cronograma de pago no encontrado"));
-
-        // Actualizar cronograma de pago
-        schedule.setStatus("PAGADO");
-        schedule.setPaidAmount(payment.getAmountPaid());
-        schedule.setPaidDate(payment.getPaymentDate().toLocalDate());
-        paymentScheduleRepository.save(schedule);
-
-        // Actualizar balance del préstamo
-        BigDecimal newBalance = loan.getBalance().subtract(payment.getAmountPaid());
-        loan.setBalance(newBalance);
-
-        // Si el balance es 0, marcar como PAID
-        if (newBalance.compareTo(BigDecimal.ZERO) <= 0) {
-            loan.setStatus("PAID");
-        }
-
-        loanRepository.save(loan);
-
-        log.info("Pago aplicado al préstamo {}. Nuevo balance: {}", loan.getLoanId(), newBalance);
-    }
-
-    /**
-     * Obtiene todos los pagos pendientes de revisión
-     */
     public List<PaymentDTO> getPendingPayments() {
-        return paymentRepository.findByStatus("PENDIENTE")
-                .stream()
-                .map(this::convertToDTO)
+        List<Payment> payments = paymentRepository.findByStatusOrderByPaymentDateDesc("PENDING");
+        return payments.stream()
+                .map(this::convertToPaymentDTO)
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Obtiene el historial de pagos de un préstamo
-     */
     public List<PaymentDTO> getLoanPayments(Long loanId) {
-        return paymentRepository.findByLoan_LoanIdOrderByPaymentDateDesc(loanId)
-                .stream()
-                .map(this::convertToDTO)
+        List<Payment> payments = paymentRepository.findByLoan_LoanIdOrderByPaymentDateDesc(loanId);
+        return payments.stream()
+                .map(this::convertToPaymentDTO)
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Obtiene el estado de cuenta completo de un préstamo
-     */
     public AccountStatementDTO getAccountStatement(Long loanId) {
         Loan loan = loanRepository.findById(loanId)
                 .orElseThrow(() -> new RuntimeException("Préstamo no encontrado"));
 
-        List<PaymentScheduleDTO> schedules = paymentScheduleRepository
-                .findByLoan_LoanIdOrderByPaymentNumberAsc(loanId)
-                .stream()
-                .map(this::convertScheduleToDTO)
-                .collect(Collectors.toList());
+        List<ProposedInstallment> proposedInstallments = proposedInstallmentRepository
+                .findByLoanApplicationLoanApplicationIDOrderByInstallmentNumber(
+                        loan.getLoanApplication().getLoanApplicationID()
+                );
 
-        List<PaymentDTO> payments = getLoanPayments(loanId);
-
-        BigDecimal paidAmount = loan.getTotalAmount().subtract(loan.getBalance());
-        int paidPayments = (int) schedules.stream()
-                .filter(s -> "PAGADO".equals(s.getStatus()))
-                .count();
+        List<Payment> payments = paymentRepository
+                .findByLoan_LoanIdOrderByPaymentDateDesc(loanId);
 
         AccountStatementDTO statement = new AccountStatementDTO();
         statement.setLoanId(loan.getLoanId());
-        statement.setLoanAmount(loan.getLoanAmount());
-        statement.setTotalInterest(loan.getTotalInterest());
-        statement.setTotalAmount(loan.getTotalAmount());
-        statement.setBalance(loan.getBalance());
+        statement.setLoanAmount(loan.getLoanAmount() != null ? loan.getLoanAmount() : BigDecimal.ZERO);
+
+        BigDecimal loanAmount = loan.getLoanAmount() != null ? loan.getLoanAmount() : BigDecimal.ZERO;
+
+        BigDecimal totalAmount = proposedInstallments.stream()
+                .map(ProposedInstallment::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalInterest = totalAmount.subtract(loanAmount);
+
+        BigDecimal balance = loan.getBalance() != null ? loan.getBalance() : totalAmount;
+
+        BigDecimal paidAmount = totalAmount.subtract(balance);
+
+        statement.setTotalInterest(totalInterest);
+        statement.setTotalAmount(totalAmount);
+        statement.setBalance(balance);
         statement.setPaidAmount(paidAmount);
-        statement.setStatus(loan.getStatus());
-        statement.setItemName(loan.getLoanApplication().getItem().getNameItem());
-        statement.setTotalPayments(loan.getTerm());
-        statement.setPaidPayments(paidPayments);
-        statement.setPaymentSchedule(schedules);
-        statement.setPayments(payments);
+        statement.setStatus(loan.getStatus() != null ? loan.getStatus() : "ACTIVE");
+
+        if (loan.getLoanApplication() != null && loan.getLoanApplication().getItem() != null) {
+            statement.setItemName(loan.getLoanApplication().getItem().getNameItem());
+        } else {
+            statement.setItemName("N/A");
+        }
+
+        statement.setTotalPayments(proposedInstallments.size());
+
+        long approvedPayments = payments.stream()
+                .filter(p -> "APPROVED".equals(p.getStatus()))
+                .count();
+        statement.setPaidPayments((int) approvedPayments);
+
+        List<PaymentScheduleDTO> scheduleDTOs = proposedInstallments.stream()
+                .map(this::convertProposedToScheduleDTO)
+                .collect(Collectors.toList());
+        statement.setPaymentSchedule(scheduleDTOs);
+
+        List<PaymentDTO> paymentDTOs = payments.stream()
+                .map(this::convertToPaymentDTO)
+                .collect(Collectors.toList());
+        statement.setPayments(paymentDTOs);
+
+        log.info("📊 Estado de cuenta - Total: {}, Interés: {}, Balance: {}, Pagado: {}",
+                totalAmount, totalInterest, balance, paidAmount);
 
         return statement;
     }
 
-    private PaymentDTO convertToDTO(Payment payment) {
+    private void updatePaymentSchedule(Long loanId, Integer paymentNumber, BigDecimal amountPaid) {
+        List<PaymentSchedule> schedules = paymentScheduleRepository
+                .findByLoan_LoanIdOrderByPaymentNumberAsc(loanId);
+
+        for (PaymentSchedule schedule : schedules) {
+            if (schedule.getPaymentNumber().equals(paymentNumber)) {
+                schedule.setStatus("PAID");
+                schedule.setPaidAmount(amountPaid);
+                schedule.setPaidDate(LocalDate.now());
+                paymentScheduleRepository.save(schedule);
+                break;
+            }
+        }
+    }
+
+    private PaymentDTO convertToPaymentDTO(Payment payment) {
         PaymentDTO dto = new PaymentDTO();
         dto.setPaymentId(payment.getPaymentId());
         dto.setLoanId(payment.getLoan().getLoanId());
@@ -206,21 +192,55 @@ public class PaymentService {
         dto.setStatus(payment.getStatus());
         dto.setReviewComment(payment.getReviewComment());
         dto.setReviewDate(payment.getReviewDate());
-        dto.setReference(payment.getReference());
+
+        if (payment.getReference() != null) {
+            dto.setReference(payment.getReference());
+        }
+
         return dto;
     }
 
-    private PaymentScheduleDTO convertScheduleToDTO(PaymentSchedule schedule) {
+    private PaymentScheduleDTO convertProposedToScheduleDTO(ProposedInstallment installment) {
+        PaymentScheduleDTO dto = new PaymentScheduleDTO();
+
+        dto.setScheduleId(installment.getInstallmentId());
+        dto.setPaymentNumber(installment.getInstallmentNumber());
+
+        dto.setDueDate(installment.getDueDate() != null
+                ? installment.getDueDate().format(DATETIME_FORMATTER)
+                : null);
+
+        dto.setAmountDue(installment.getAmount() != null ? installment.getAmount() : BigDecimal.ZERO);
+
+        dto.setPrincipalAmount(BigDecimal.ZERO);
+        dto.setInterestAmount(BigDecimal.ZERO);
+
+        dto.setStatus("PENDIENTE");
+        dto.setPaidAmount(null);
+        dto.setPaidDate(null);
+
+        return dto;
+    }
+
+    private PaymentScheduleDTO convertToScheduleDTO(PaymentSchedule schedule) {
         PaymentScheduleDTO dto = new PaymentScheduleDTO();
         dto.setScheduleId(schedule.getScheduleId());
         dto.setPaymentNumber(schedule.getPaymentNumber());
-        dto.setDueDate(schedule.getDueDate().toString());
-        dto.setAmountDue(schedule.getAmountDue());
-        dto.setPrincipalAmount(schedule.getPrincipalAmount());
-        dto.setInterestAmount(schedule.getInterestAmount());
-        dto.setStatus(schedule.getStatus());
+
+        dto.setDueDate(schedule.getDueDate() != null
+                ? schedule.getDueDate().format(DATE_FORMATTER)
+                : null);
+
+        dto.setAmountDue(schedule.getAmountDue() != null ? schedule.getAmountDue() : BigDecimal.ZERO);
+        dto.setPrincipalAmount(schedule.getPrincipalAmount() != null ? schedule.getPrincipalAmount() : BigDecimal.ZERO);
+        dto.setInterestAmount(schedule.getInterestAmount() != null ? schedule.getInterestAmount() : BigDecimal.ZERO);
+        dto.setStatus(schedule.getStatus() != null ? schedule.getStatus() : "PENDING");
         dto.setPaidAmount(schedule.getPaidAmount());
-        dto.setPaidDate(schedule.getPaidDate() != null ? schedule.getPaidDate().toString() : null);
+
+        dto.setPaidDate(schedule.getPaidDate() != null
+                ? schedule.getPaidDate().format(DATE_FORMATTER)
+                : null);
+
         return dto;
     }
 }

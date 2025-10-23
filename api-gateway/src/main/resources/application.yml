@@ -2,8 +2,8 @@ server:
   port: 8080
 
 frontend:
-  base-url: http://192.168.1.39:4200
-  url-decoder: http://192.168.1.39:9000
+  base-url: http://localhost:4200
+  url-decoder: http://localhost:9000
 
 spring:
   security:
@@ -21,19 +21,23 @@ spring:
           lower-case-service-id: true
       routes:
         - id: auth-service
-          uri: http://192.168.1.39:9000
+          uri: http://localhost:9000
           predicates:
             - Path=/auth/**
         - id: loan-application
-          uri: http://192.168.1.39:8083
+          uri: http://localhost:8083
           predicates:
             - Path=/loan-applications/**
+        - id: payment-service
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/payments/**
         - id: user-service
-          uri: http://192.168.1.39:8082
+          uri: http://localhost:8082
           predicates:
             - Path=/admin/users/**
         - id: business-parameter-service
-          uri: http://192.168.1.39:8084
+          uri: http://localhost:8084
           predicates:
             - Path=/business-parameters/**
           filters:
@@ -43,7 +47,7 @@ eureka:
     register-with-eureka: true
     fetch-registry: true
     service-url:
-      defaultZone: http://192.168.1.39:8761/eureka
+      defaultZone: http://localhost:8761/eureka
     instance:
       lease-renewal-interval-in-seconds: 10
       lease-expiration-duration-in-seconds: 30

@@ -578,17 +578,37 @@ public class LoanApplicationController {
     }
 
     private Loan createLoanFromApplication(LoanApplication app) {
+
+        List<ProposedInstallment> installments = proposedInstallmentRepository
+                .findByLoanApplicationLoanApplicationIDOrderByInstallmentNumber(
+                        app.getLoanApplicationID()
+                );
+
+        if (installments.isEmpty()) {
+            throw new RuntimeException("No se encontraron cuotas propuestas para esta aplicación");
+        }
+
+        BigDecimal loanAmount = BigDecimal.valueOf(app.getApprovedAmount());
+
+        BigDecimal totalAmount = installments.stream()
+                .map(ProposedInstallment::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalInterest = totalAmount.subtract(loanAmount);
+
         Loan loan = new Loan();
         loan.setLoanApplication(app);
         loan.setApprovalDate(LocalDateTime.now());
-        loan.setLoanAmount(BigDecimal.valueOf(app.getApprovedAmount()));
+        loan.setLoanAmount(loanAmount);
         loan.setInterestRate(new BigDecimal("5.00")); // 5% mensual
         loan.setTerm(app.getQuantityPayments());
 
-        loan.setDueDate(LocalDateTime.now().plusDays(30L * (app.getQuantityPayments() + 1)));
+        loan.setTotalInterest(totalInterest);
+        loan.setTotalAmount(totalAmount);
+        loan.setBalance(totalAmount);
 
+        loan.setDueDate(LocalDateTime.now().plusDays(30L * (app.getQuantityPayments() + 1)));
         loan.setStatus("ACTIVO");
-        loan.setBalance(BigDecimal.valueOf(app.getApprovedAmount()));
 
         loan.setContractNumber(contractGenerationService.generateContractNumber());
         loan.setContractSignatureHash(
@@ -601,9 +621,13 @@ public class LoanApplicationController {
         loan.setContractGeneratedDate(LocalDateTime.now());
         loan.setLatePaymentFee(new BigDecimal("50.00")); // Mora diaria
         loan.setGracePeriodDays(30); // 30 días de gracia
-        //loan.setDefaultDays(90); // 90 días para considerar incumplimiento
+        loan.setDefaultDays(90); // 90 días para considerar incumplimiento
+        Loan savedLoan = loanRepository.save(loan);
 
-        return loanRepository.save(loan);
+        log.info("✅ Préstamo creado - ID: {}, Capital: {}, Interés: {}, Total: {}, Balance: {}",
+                savedLoan.getLoanId(), loanAmount, totalInterest, totalAmount, totalAmount);
+
+        return savedLoan;
     }
 
     private void sendInstallmentNotificationToClient(

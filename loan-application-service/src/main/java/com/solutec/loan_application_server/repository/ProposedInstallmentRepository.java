@@ -8,4 +8,5 @@ import java.util.List;
 @Repository
 public interface ProposedInstallmentRepository extends JpaRepository<ProposedInstallment, Long> {
     List<ProposedInstallment> findByLoanApplicationLoanApplicationIDOrderByInstallmentNumber(Long loanApplicationId);
+    List<ProposedInstallment> findByLoanApplication_LoanApplicationID(Long loanApplicationID);
 }

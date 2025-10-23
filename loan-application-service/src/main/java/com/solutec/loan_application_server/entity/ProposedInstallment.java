@@ -11,6 +11,8 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Getter
+@Setter
 public class ProposedInstallment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

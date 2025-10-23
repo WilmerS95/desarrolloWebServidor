@@ -310,7 +310,7 @@ public class ContractGenerationService {
             <div class="signature-line">
                 <strong>EL DEUDOR</strong><br>
                 %s %s<br>
-                DPI: %s
+                Usuario: %s
             </div>
         </div>
         <div style="clear:both;"></div>
