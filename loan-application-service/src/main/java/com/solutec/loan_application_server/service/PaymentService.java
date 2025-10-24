@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -83,7 +84,7 @@ public class PaymentService {
             BigDecimal amountPaid = payment.getAmountPaid();
             Integer paymentNumber = payment.getPaymentNumber();
 
-            log.info("💰 Procesando APROBACIÓN del pago:");
+            log.info(" Procesando APROBACIÓN del pago:");
             log.info("  - Préstamo ID: {}", loan.getLoanId());
             log.info("  - Balance actual: {}", loan.getBalance());
             log.info("  - Monto pagado: {}", amountPaid);
@@ -194,101 +195,204 @@ public class PaymentService {
     public AccountStatementDTO getAccountStatement(Long loanId) {
         log.info("=== INICIANDO getAccountStatement para loanId: {} ===", loanId);
 
-        try {
-            Loan loan = loanRepository.findById(loanId)
-                    .orElseThrow(() -> new RuntimeException("Préstamo no encontrado con ID: " + loanId));
+        Loan loan = loanRepository.findById(loanId)
+                .orElseThrow(() -> new RuntimeException("Préstamo no encontrado con ID: " + loanId));
 
-            log.info(" Préstamo encontrado: ID={}, Status={}", loan.getLoanId(), loan.getStatus());
+        log.info(" Préstamo encontrado: ID={}, Status={}", loan.getLoanId(), loan.getStatus());
 
-            if (loan.getLoanApplication() == null) {
-                log.error(" El préstamo {} NO tiene LoanApplication asociada", loanId);
-                throw new RuntimeException("El préstamo no tiene una solicitud asociada");
-            }
-
-            Long loanApplicationId = loan.getLoanApplication().getLoanApplicationID();
-            log.info(" LoanApplication ID: {}", loanApplicationId);
-
-            List<ProposedInstallment> proposedInstallments;
-            try {
-                proposedInstallments = proposedInstallmentRepository
-                        .findByLoanApplicationLoanApplicationIDOrderByInstallmentNumber(loanApplicationId);
-                log.info(" ProposedInstallments encontrados: {}", proposedInstallments.size());
-            } catch (Exception e) {
-                log.error(" Error obteniendo ProposedInstallments", e);
-                throw new RuntimeException("Error al obtener el cronograma de cuotas propuestas: " + e.getMessage());
-            }
-
-            if (proposedInstallments.isEmpty()) {
-                log.warn(" No hay cuotas propuestas para el préstamo {}", loanId);
-                return buildBasicAccountStatement(loan);
-            }
-
-            List<Payment> payments = paymentRepository
-                    .findByLoan_LoanIdOrderByPaymentDateDesc(loanId);
-            log.info(" Pagos encontrados: {}", payments.size());
-
-            AccountStatementDTO statement = new AccountStatementDTO();
-            statement.setLoanId(loan.getLoanId());
-            statement.setLoanAmount(loan.getLoanAmount() != null ? loan.getLoanAmount() : BigDecimal.ZERO);
-
-            BigDecimal loanAmount = loan.getLoanAmount() != null ? loan.getLoanAmount() : BigDecimal.ZERO;
-
-            BigDecimal totalAmount = proposedInstallments.stream()
-                    .map(ProposedInstallment::getAmount)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            BigDecimal totalInterest = totalAmount.subtract(loanAmount);
-
-            BigDecimal balance = loan.getBalance() != null ? loan.getBalance() : totalAmount;
-
-            BigDecimal paidAmount = totalAmount.subtract(balance);
-
-            statement.setTotalInterest(totalInterest);
-            statement.setTotalAmount(totalAmount);
-            statement.setBalance(balance);
-            statement.setPaidAmount(paidAmount);
-            statement.setStatus(loan.getStatus() != null ? loan.getStatus() : "ACTIVO");
-
-            String itemName = "N/A";
-            try {
-                if (loan.getLoanApplication() != null &&
-                        loan.getLoanApplication().getItem() != null &&
-                        loan.getLoanApplication().getItem().getNameItem() != null) {
-                    itemName = loan.getLoanApplication().getItem().getNameItem();
-                }
-            } catch (Exception e) {
-                log.warn("⚠️ Error obteniendo nombre del item", e);
-            }
-            statement.setItemName(itemName);
-
-            statement.setTotalPayments(proposedInstallments.size());
-
-            long approvedPayments = payments.stream()
-                    .filter(p -> "APPROVED".equals(p.getStatus()))
-                    .count();
-            statement.setPaidPayments((int) approvedPayments);
-
-            List<PaymentScheduleDTO> scheduleDTOs = proposedInstallments.stream()
-                    .map(this::convertProposedToScheduleDTO)
-                    .collect(Collectors.toList());
-            statement.setPaymentSchedule(scheduleDTOs);
-
-            List<PaymentDTO> paymentDTOs = payments.stream()
-                    .map(this::convertToPaymentDTO)
-                    .collect(Collectors.toList());
-            statement.setPayments(paymentDTOs);
-
-            log.info(" Estado de cuenta construido exitosamente");
-            log.info(" Total: {}, Interés: {}, Balance: {}, Pagado: {}",
-                    totalAmount, totalInterest, balance, paidAmount);
-
-            return statement;
-
-        } catch (Exception e) {
-            log.error(" ERROR CRÍTICO en getAccountStatement para loanId: {}", loanId, e);
-            log.error(" Mensaje de error: {}", e.getMessage());
-            throw new RuntimeException("Error al obtener el estado de cuenta: " + e.getMessage(), e);
+        LoanApplication loanApplication = loan.getLoanApplication();
+        if (loanApplication == null) {
+            throw new RuntimeException("LoanApplication no encontrado para el préstamo: " + loanId);
         }
+        log.info(" LoanApplication ID: {}", loanApplication.getLoanApplicationID());
+
+        List<ProposedInstallment> proposedInstallments = proposedInstallmentRepository
+                .findByLoanApplication(loanApplication);
+
+        log.info(" ProposedInstallments encontrados: {}", proposedInstallments.size());
+
+        List<Payment> payments = paymentRepository.findByLoan(loan);
+        log.info(" Pagos encontrados: {}", payments.size());
+
+        int paidPayments = (int) proposedInstallments.stream()
+                .filter(inst -> "PAGADO".equalsIgnoreCase(inst.getStatus()))
+                .count();
+
+        log.info(" Cuotas pagadas: {} de {}", paidPayments, proposedInstallments.size());
+
+        BigDecimal totalPaidAmount = proposedInstallments.stream()
+                .filter(inst -> "PAGADO".equalsIgnoreCase(inst.getStatus()))
+                .map(inst -> inst.getPaidAmount() != null ? inst.getPaidAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        log.info(" Monto total pagado: {}", totalPaidAmount);
+
+        List<PaymentScheduleDTO> paymentSchedule = proposedInstallments.stream()
+                .map(installment -> {
+                    PaymentScheduleDTO dto = new PaymentScheduleDTO();
+                    dto.setScheduleId(installment.getInstallmentId());
+                    dto.setPaymentNumber(installment.getInstallmentNumber());
+                    dto.setDueDate(installment.getDueDate());
+                    dto.setAmountDue(installment.getAmount());
+
+                    BigDecimal monthlyRate = loan.getInterestRate()
+                            .divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP)
+                            .divide(BigDecimal.valueOf(12), 10, RoundingMode.HALF_UP);
+
+                    int remainingPayments = loan.getTerm() - installment.getInstallmentNumber() + 1;
+                    BigDecimal remainingBalance = loan.getLoanAmount()
+                            .multiply(BigDecimal.valueOf(remainingPayments))
+                            .divide(BigDecimal.valueOf(loan.getTerm()), 2, RoundingMode.HALF_UP);
+
+                    BigDecimal interestAmount = remainingBalance.multiply(monthlyRate)
+                            .setScale(2, RoundingMode.HALF_UP);
+                    BigDecimal principalAmount = installment.getAmount().subtract(interestAmount);
+
+                    dto.setPrincipalAmount(principalAmount);
+                    dto.setInterestAmount(interestAmount);
+
+                    String status = installment.getStatus() != null ? installment.getStatus() : "PENDIENTE";
+                    dto.setStatus(status);
+
+                    dto.setPaidAmount(installment.getPaidAmount());
+                    dto.setPaidAmount(installment.getPaidAmount());
+                    dto.setPaidDate(installment.getPaidDate());
+
+                    log.info("  Cuota #{}: Monto={}, Estado={}, Pagado={}, Fecha={}",
+                            installment.getInstallmentNumber(),
+                            installment.getAmount(),
+                            status,
+                            installment.getPaidAmount(),
+                            installment.getPaidDate());
+
+                    return dto;
+                })
+                .collect(Collectors.toList());
+
+        List<PaymentDTO> paymentDTOs = payments.stream()
+                .map(payment -> {
+                    PaymentDTO dto = new PaymentDTO();
+                    dto.setPaymentId(payment.getPaymentId());
+                    dto.setLoanId(payment.getLoan().getLoanId());
+                    dto.setPaymentNumber(payment.getPaymentNumber());
+                    dto.setPaymentDate(payment.getPaymentDate());
+                    dto.setAmountPaid(payment.getAmountPaid());
+                    dto.setPaymentMethod(payment.getPaymentMethod());
+                    dto.setStatus(payment.getStatus());
+                    dto.setReviewComment(payment.getReviewComment());
+                    dto.setReviewDate(payment.getReviewDate());
+                    dto.setReference(payment.getReference());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+
+        AccountStatementDTO statement = new AccountStatementDTO();
+        statement.setLoanId(loan.getLoanId());
+        statement.setLoanAmount(loan.getLoanAmount());
+        statement.setTotalInterest(loan.getTotalInterest());
+        statement.setTotalAmount(loan.getTotalAmount());
+        statement.setBalance(loan.getBalance());
+        statement.setPaidAmount(totalPaidAmount);  // Monto calculado desde las cuotas
+        statement.setStatus(loan.getStatus());
+
+        String clientName = "Cliente";
+        String clientEmail = "N/A";
+        String clientPhone = "N/A";
+
+        try {
+            User user = loanApplication.getUser();
+            if (user != null) {
+                log.info(" Usuario encontrado: ID={}, Username={}",
+                        user.getUserID(), user.getUsername());
+
+                StringBuilder nombreCompleto = new StringBuilder();
+
+                if (user.getFirstName() != null && !user.getFirstName().trim().isEmpty()) {
+                    nombreCompleto.append(user.getFirstName().trim());
+                }
+
+                if (user.getSecondOrMoreNames() != null && !user.getSecondOrMoreNames().trim().isEmpty()) {
+                    if (nombreCompleto.length() > 0) nombreCompleto.append(" ");
+                    nombreCompleto.append(user.getSecondOrMoreNames().trim());
+                }
+
+                if (user.getFirstLastName() != null && !user.getFirstLastName().trim().isEmpty()) {
+                    if (nombreCompleto.length() > 0) nombreCompleto.append(" ");
+                    nombreCompleto.append(user.getFirstLastName().trim());
+                }
+
+                if (user.getSecondLastName() != null && !user.getSecondLastName().trim().isEmpty()) {
+                    if (nombreCompleto.length() > 0) nombreCompleto.append(" ");
+                    nombreCompleto.append(user.getSecondLastName().trim());
+                }
+
+                if (user.getMarriedLastName() != null && !user.getMarriedLastName().trim().isEmpty()) {
+                    if (nombreCompleto.length() > 0) nombreCompleto.append(" de ");
+                    nombreCompleto.append(user.getMarriedLastName().trim());
+                }
+
+                if (nombreCompleto.length() > 0) {
+                    clientName = nombreCompleto.toString();
+                    log.info("✅ Nombre completo: {}", clientName);
+                } else if (user.getUsername() != null && !user.getUsername().trim().isEmpty()) {
+                    clientName = user.getUsername();
+                    log.info("✅ Usando username: {}", clientName);
+                }
+
+                if (user.getEmail() != null && !user.getEmail().trim().isEmpty()) {
+                    clientEmail = user.getEmail();
+                } else {
+                    clientEmail = "No proporcionado";
+                }
+
+                if (user.getTelephone() != null && !user.getTelephone().trim().isEmpty()) {
+                    clientPhone = user.getTelephone();
+                } else {
+                    clientPhone = "No proporcionado";
+                }
+
+                log.info("   - Nombre: {}", clientName);
+                log.info("   - Email: {}", clientEmail);
+                log.info("   - Teléfono: {}", clientPhone);
+
+            } else {
+                log.warn(" User no encontrado para LoanApplication ID: {}",
+                        loanApplication.getLoanApplicationID());
+            }
+        } catch (Exception e) {
+            log.error(" Error obteniendo información del cliente", e);
+            e.printStackTrace();
+        }
+
+        statement.setClientName(clientName);
+        statement.setClientEmail(clientEmail);
+        statement.setClientPhone(clientPhone);
+
+        String itemName = "N/A";
+
+        try {
+            if (loanApplication.getItem() != null) {
+                itemName = loanApplication.getItem().getNameItem();
+            }
+        } catch (Exception e) {
+            log.warn(" Error obteniendo nombre del item", e);
+        }
+        statement.setItemName(itemName);
+
+        statement.setTotalPayments(proposedInstallments.size());
+        statement.setPaidPayments(paidPayments);
+
+        statement.setPaymentSchedule(paymentSchedule);
+        statement.setPayments(paymentDTOs);
+
+        log.info(" Estado de cuenta construido exitosamente:");
+        log.info("   - Total cuotas: {}", statement.getTotalPayments());
+        log.info("   - Cuotas pagadas: {}", statement.getPaidPayments());
+        log.info("   - Monto pagado: {}", statement.getPaidAmount());
+        log.info("   - Balance: {}", statement.getBalance());
+        log.info("=== FINALIZANDO getAccountStatement ===");
+
+        return statement;
     }
 
     private AccountStatementDTO buildBasicAccountStatement(Loan loan) {
@@ -362,9 +466,7 @@ public class PaymentService {
         dto.setScheduleId(installment.getInstallmentId());
         dto.setPaymentNumber(installment.getInstallmentNumber());
 
-        dto.setDueDate(installment.getDueDate() != null
-                ? installment.getDueDate().format(DATETIME_FORMATTER)
-                : null);
+        dto.setDueDate(installment.getDueDate());
 
         dto.setAmountDue(installment.getAmount() != null ? installment.getAmount() : BigDecimal.ZERO);
 
@@ -384,7 +486,7 @@ public class PaymentService {
         dto.setPaymentNumber(schedule.getPaymentNumber());
 
         dto.setDueDate(schedule.getDueDate() != null
-                ? schedule.getDueDate().format(DATE_FORMATTER)
+                ? LocalDateTime.parse(schedule.getDueDate().format(DATE_FORMATTER))
                 : null);
 
         dto.setAmountDue(schedule.getAmountDue() != null ? schedule.getAmountDue() : BigDecimal.ZERO);
@@ -394,7 +496,7 @@ public class PaymentService {
         dto.setPaidAmount(schedule.getPaidAmount());
 
         dto.setPaidDate(schedule.getPaidDate() != null
-                ? schedule.getPaidDate().format(DATE_FORMATTER)
+                ? LocalDateTime.parse(schedule.getPaidDate().format(DATE_FORMATTER))
                 : null);
 
         return dto;

@@ -4,10 +4,10 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-@Setter
-@Getter
 @Entity
 @Table(name = "User")
+@Getter
+@Setter
 public class User {
 
     @Id
@@ -15,20 +15,11 @@ public class User {
     @Column(name = "userID")
     private Long userID;
 
-    @Column(name = "username", nullable = false, unique = true)
+    @Column(name = "username", unique = true, nullable = false)
     private String username;
-
-    @Column(name = "password", nullable = false)
-    private String password;
-
-    @Column(name = "email", nullable = false, unique = true)
-    private String email;
 
     @Column(name = "firstName", nullable = false)
     private String firstName;
-
-    @Column(name = "secondOrMoreNames")
-    private String secondOrMoreNames;
 
     @Column(name = "firstLastName", nullable = false)
     private String firstLastName;
@@ -39,14 +30,23 @@ public class User {
     @Column(name = "marriedLastName")
     private String marriedLastName;
 
+    @Column(name = "secondOrMoreNames")
+    private String secondOrMoreNames;
+
+    @Column(name = "email", unique = true, nullable = false)
+    private String email;
+
     @Column(name = "telephone")
     private String telephone;
 
     @Column(name = "address")
     private String address;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "roleID")
+    @Column(name = "password", nullable = false)
+    private String password;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "roleID", referencedColumnName = "roleID")
     private Role role;
 
     /*@ManyToMany(fetch = FetchType.EAGER)

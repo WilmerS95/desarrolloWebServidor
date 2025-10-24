@@ -8,6 +8,8 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Getter
+@Setter
 public class AccountStatementDTO {
     private Long loanId;
     private BigDecimal loanAmount;
@@ -21,4 +23,9 @@ public class AccountStatementDTO {
     private Integer paidPayments;
     private List<PaymentScheduleDTO> paymentSchedule;
     private List<PaymentDTO> payments;
+
+    private String clientName;
+    private String clientEmail;
+    private String clientPhone;
+
 }
