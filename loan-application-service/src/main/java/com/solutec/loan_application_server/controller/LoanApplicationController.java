@@ -1176,4 +1176,107 @@ public class LoanApplicationController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
+
+    @GetMapping("/my-loans/with-balance")
+    public ResponseEntity<?> getMyLoansWithBalance(@AuthenticationPrincipal Jwt jwt) {
+        try {
+            Object userIdObj = jwt.getClaims().get("userId");
+            if (userIdObj == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Usuario no autenticado"));
+            }
+
+            Long userId = (userIdObj instanceof Number)
+                    ? ((Number) userIdObj).longValue()
+                    : Long.parseLong(userIdObj.toString());
+
+            log.info(" Obteniendo préstamos con balance para usuario: {}", userId);
+
+            List<Loan> allLoans = loanRepository.findAll().stream()
+                    .filter(loan -> {
+                        if (loan.getLoanApplication() != null &&
+                                loan.getLoanApplication().getUser() != null) {
+                            boolean matches = loan.getLoanApplication().getUser().getUserID().equals(userId);
+                            if (matches) {
+                                log.info("   Préstamo encontrado: ID={}, Status={}, Balance={}",
+                                        loan.getLoanId(), loan.getStatus(), loan.getBalance());
+                            }
+                            return matches;
+                        }
+                        return false;
+                    })
+                    .toList();
+
+            log.info(" Total de préstamos del usuario: {}", allLoans.size());
+
+            List<Loan> loans = allLoans.stream()
+                    .filter(loan -> {
+                        String status = loan.getStatus();
+
+                        boolean isActiveStatus = status != null && (
+                                "ACTIVE".equalsIgnoreCase(status) ||
+                                        "ACTIVO".equalsIgnoreCase(status) ||
+                                        "PENDING_PAYMENT".equalsIgnoreCase(status) ||
+                                        "PAGO_PENDIENTE".equalsIgnoreCase(status) ||
+                                        "PENDIENTE".equalsIgnoreCase(status) ||
+                                        "EN_PROGRESO".equalsIgnoreCase(status) ||
+                                        "APROBADO".equalsIgnoreCase(status)
+                        );
+
+                        boolean hasBalance = loan.getBalance() != null &&
+                                loan.getBalance().compareTo(BigDecimal.ZERO) > 0;
+
+                        log.info(" Préstamo ID={}: Status={}, IsActive={}, Balance={}, HasBalance={}",
+                                loan.getLoanId(), status, isActiveStatus, loan.getBalance(), hasBalance);
+
+                        return isActiveStatus && hasBalance;
+                    })
+                    .toList();
+
+            log.info(" Préstamos con balance filtrados: {}", loans.size());
+
+            List<Map<String, Object>> loanDTOs = loans.stream()
+                    .map(loan -> {
+                        Map<String, Object> dto = new HashMap<>();
+                        dto.put("loanId", loan.getLoanId());
+                        dto.put("loanAmount", loan.getLoanAmount() != null ? loan.getLoanAmount() : BigDecimal.ZERO);
+                        dto.put("interestRate", loan.getInterestRate() != null ? loan.getInterestRate() : BigDecimal.ZERO);
+                        dto.put("term", loan.getTerm() != null ? loan.getTerm() : 0);
+                        dto.put("totalInterest", loan.getTotalInterest() != null ? loan.getTotalInterest() : BigDecimal.ZERO);
+                        dto.put("totalAmount", loan.getTotalAmount() != null ? loan.getTotalAmount() : BigDecimal.ZERO);
+                        dto.put("balance", loan.getBalance() != null ? loan.getBalance() : BigDecimal.ZERO);
+                        dto.put("status", loan.getStatus() != null ? loan.getStatus() : "UNKNOWN");
+
+                        String itemName = "N/A";
+                        try {
+                            if (loan.getLoanApplication() != null &&
+                                    loan.getLoanApplication().getItem() != null &&
+                                    loan.getLoanApplication().getItem().getNameItem() != null) {
+                                itemName = loan.getLoanApplication().getItem().getNameItem();
+                            }
+                        } catch (Exception e) {
+                            log.warn(" Error obteniendo nombre del item para loan {}", loan.getLoanId(), e);
+                        }
+                        dto.put("itemName", itemName);
+
+                        dto.put("approvalDate", loan.getApprovalDate());
+                        dto.put("disbursementDate", loan.getContractGeneratedDate());
+
+                        log.info(" DTO: Loan ID={}, Item={}, Balance={}",
+                                loan.getLoanId(), itemName, loan.getBalance());
+
+                        return dto;
+                    })
+                    .toList();
+
+            log.info(" Retornando {} préstamos con balance al cliente", loanDTOs.size());
+
+            return ResponseEntity.ok(loanDTOs);
+
+        } catch (Exception e) {
+            log.error(" Error obteniendo préstamos con balance", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
 }

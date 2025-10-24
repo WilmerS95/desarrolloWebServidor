@@ -25,4 +25,13 @@ public class ProposedInstallment {
     private Integer installmentNumber;
     private BigDecimal amount;
     private LocalDateTime dueDate;
+
+    @Column(name = "status", length = 50)
+    private String status = "PENDIENTE";
+
+    @Column(name = "paidAmount", precision = 18, scale = 2)
+    private BigDecimal paidAmount;
+
+    @Column(name = "paidDate")
+    private LocalDateTime paidDate;
 }

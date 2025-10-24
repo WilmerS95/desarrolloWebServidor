@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -59,34 +60,121 @@ public class PaymentService {
 
     @Transactional
     public PaymentDTO reviewPayment(PaymentReviewDTO reviewDTO, Long adminUserId) {
+        log.info("=== INICIANDO reviewPayment para paymentId: {} ===", reviewDTO.getPaymentId());
+
         Payment payment = paymentRepository.findById(reviewDTO.getPaymentId())
-                .orElseThrow(() -> new RuntimeException("Pago no encontrado"));
+                .orElseThrow(() -> new RuntimeException("Pago no encontrado con ID: " + reviewDTO.getPaymentId()));
+
+        log.info(" Pago encontrado: ID={}, Loan={}, Amount={}, PaymentNumber={}",
+                payment.getPaymentId(), payment.getLoan().getLoanId(),
+                payment.getAmountPaid(), payment.getPaymentNumber());
 
         payment.setStatus(reviewDTO.getStatus());
         payment.setReviewComment(reviewDTO.getComment());
         payment.setReviewDate(LocalDateTime.now());
         payment.setReviewedBy(adminUserId);
 
-        if ("APPROVED".equals(reviewDTO.getStatus())) {
+        log.info(" Estado del pago actualizado a: {}", reviewDTO.getStatus());
+
+        if ("APROBADO".equalsIgnoreCase(reviewDTO.getStatus()) ||
+                "APPROVED".equalsIgnoreCase(reviewDTO.getStatus())) {
+
             Loan loan = payment.getLoan();
+            BigDecimal amountPaid = payment.getAmountPaid();
+            Integer paymentNumber = payment.getPaymentNumber();
 
-            BigDecimal currentBalance = loan.getBalance() != null ? loan.getBalance() : BigDecimal.ZERO;
-            BigDecimal newBalance = currentBalance.subtract(payment.getAmountPaid());
-            loan.setBalance(newBalance.max(BigDecimal.ZERO));
+            log.info("💰 Procesando APROBACIÓN del pago:");
+            log.info("  - Préstamo ID: {}", loan.getLoanId());
+            log.info("  - Balance actual: {}", loan.getBalance());
+            log.info("  - Monto pagado: {}", amountPaid);
+            log.info("  - Número de cuota: {}", paymentNumber);
 
-            if (newBalance.compareTo(BigDecimal.ZERO) <= 0) {
-                loan.setStatus("PAID");
+            BigDecimal newBalance = loan.getBalance().subtract(amountPaid);
+            if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
+                newBalance = BigDecimal.ZERO;
+            }
+
+            log.info("  - Nuevo balance: {}", newBalance);
+            loan.setBalance(newBalance);
+
+            if (newBalance.compareTo(BigDecimal.ZERO) == 0) {
+                log.info("🎉 Préstamo COMPLETAMENTE PAGADO - Cambiando status a PAGADO");
+                loan.setStatus("PAGADO");
             }
 
             loanRepository.save(loan);
+            log.info(" Balance del préstamo actualizado exitosamente");
 
-            updatePaymentSchedule(loan.getLoanId(), payment.getPaymentNumber(), payment.getAmountPaid());
+            try {
+                LoanApplication loanApplication = loan.getLoanApplication();
+                if (loanApplication != null) {
+                    log.info(" Buscando cuota #{} en ProposedInstallments", paymentNumber);
+
+                    List<ProposedInstallment> installments = proposedInstallmentRepository
+                            .findByLoanApplication(loanApplication);
+
+                    log.info("  - Total de cuotas encontradas: {}", installments.size());
+
+                    Optional<ProposedInstallment> installmentOpt = installments.stream()
+                            .filter(inst -> inst.getInstallmentNumber().equals(paymentNumber))
+                            .findFirst();
+
+                    if (installmentOpt.isPresent()) {
+                        ProposedInstallment installment = installmentOpt.get();
+
+                        log.info(" Cuota encontrada:");
+                        log.info("  - Número: {}", installment.getInstallmentNumber());
+                        log.info("  - Monto cuota: {}", installment.getAmount());
+                        log.info("  - Estado actual: {}", installment.getStatus());
+                        log.info("  - Monto pagado actual: {}", installment.getPaidAmount());
+
+                        installment.setStatus("PAGADO");
+                        installment.setPaidAmount(amountPaid);
+                        installment.setPaidDate(LocalDateTime.now());
+
+                        proposedInstallmentRepository.save(installment);
+
+                        log.info(" Cuota #{} marcada como PAGADA con monto: {}",
+                                paymentNumber, amountPaid);
+                    } else {
+                        log.warn(" No se encontró la cuota #{} para el préstamo {}",
+                                paymentNumber, loan.getLoanId());
+                    }
+                } else {
+                    log.warn(" LoanApplication no encontrado para el préstamo {}", loan.getLoanId());
+                }
+            } catch (Exception e) {
+                log.error(" Error actualizando ProposedInstallment", e);
+                // No lanzamos excepción para no revertir la transacción
+            }
+        } else {
+            log.info(" Pago RECHAZADO - No se actualiza el balance ni las cuotas");
         }
 
-        payment = paymentRepository.save(payment);
-        log.info("Pago {} revisado como {}", payment.getPaymentId(), payment.getStatus());
+        // 4. Guardar el pago actualizado
+        Payment savedPayment = paymentRepository.save(payment);
+        log.info("✅ Pago guardado exitosamente con nuevo estado: {}", savedPayment.getStatus());
 
-        return convertToPaymentDTO(payment);
+        // 5. Convertir a DTO y retornar
+        PaymentDTO dto = convertToDTO(savedPayment);
+
+        log.info("=== FINALIZANDO reviewPayment ===");
+        return dto;
+    }
+
+    private PaymentDTO convertToDTO(Payment payment) {
+        PaymentDTO dto = new PaymentDTO();
+        dto.setPaymentId(payment.getPaymentId());
+        dto.setLoanId(payment.getLoan().getLoanId());
+        dto.setPaymentNumber(payment.getPaymentNumber());
+        dto.setPaymentDate(payment.getPaymentDate());
+        dto.setAmountPaid(payment.getAmountPaid());
+        dto.setPaymentMethod(payment.getPaymentMethod());
+        dto.setStatus(payment.getStatus());
+        dto.setReviewComment(payment.getReviewComment());
+        dto.setReviewDate(payment.getReviewDate());
+        dto.setReference(payment.getReference());
+        return dto;
     }
 
     public List<PaymentDTO> getPendingPayments() {
