@@ -16,6 +16,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.solutec.loan_application_server.util.JwtUtil;
+import com.solutec.loan_application_server.dto.LoanDTO;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -43,6 +45,9 @@ public class LoanApplicationController {
 
     @Autowired
     private ContractGenerationService contractGenerationService;
+
+    @Autowired
+    private LoanService loanService;
 
     @GetMapping
     public String getLoans(Authentication authentication) {
@@ -1057,6 +1062,118 @@ public class LoanApplicationController {
         } catch (Exception e) {
             log.error("Error generando contrato HTML", e);
             return ResponseEntity.status(500).body("Error generando contrato: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/my-loans")
+    public ResponseEntity<?> getMyActiveLoans(@AuthenticationPrincipal Jwt jwt) {
+        try {
+            Object userIdObj = jwt.getClaims().get("userId");
+            if (userIdObj == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Usuario no autenticado"));
+            }
+
+            Long userId = (userIdObj instanceof Number)
+                    ? ((Number) userIdObj).longValue()
+                    : Long.parseLong(userIdObj.toString());
+
+            log.info("Obteniendo préstamos activos del usuario: {}", userId);
+
+            List<Loan> loans = loanRepository.findAll().stream()
+                    .filter(loan -> {
+                        if (loan.getLoanApplication() != null &&
+                                loan.getLoanApplication().getUser() != null) {
+                            return loan.getLoanApplication().getUser().getUserID().equals(userId);
+                        }
+                        return false;
+                    })
+                    .filter(loan -> {
+                        String status = loan.getStatus();
+                        return "ACTIVE".equalsIgnoreCase(status) ||
+                                "ACTIVO".equalsIgnoreCase(status) ||  // ✅ Español
+                                "PENDING_PAYMENT".equalsIgnoreCase(status) ||
+                                "PAGO_PENDIENTE".equalsIgnoreCase(status) ||
+                                "PENDIENTE".equalsIgnoreCase(status);
+                    })
+                    .toList();
+
+            List<Map<String, Object>> loanDTOs = loans.stream()
+                    .map(loan -> {
+                        Map<String, Object> dto = new HashMap<>();
+                        dto.put("loanId", loan.getLoanId());
+                        dto.put("loanAmount", loan.getLoanAmount() != null ? loan.getLoanAmount() : BigDecimal.ZERO);
+                        dto.put("interestRate", loan.getInterestRate());
+                        dto.put("term", loan.getTerm());
+                        dto.put("totalInterest", loan.getTotalInterest());
+                        dto.put("totalAmount", loan.getTotalAmount());
+                        dto.put("balance", loan.getBalance() != null ? loan.getBalance() : BigDecimal.ZERO);
+                        dto.put("status", loan.getStatus());
+                        dto.put("itemName", loan.getLoanApplication().getItem().getNameItem());
+                        dto.put("approvalDate", loan.getApprovalDate());
+                        dto.put("disbursementDate", loan.getContractGeneratedDate());
+                        return dto;
+                    })
+                    .toList();
+
+            return ResponseEntity.ok(loanDTOs);
+
+        } catch (Exception e) {
+            log.error("Error obteniendo préstamos del usuario", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/my-loans/all")
+    public ResponseEntity<?> getAllMyLoans(@AuthenticationPrincipal Jwt jwt) {
+        try {
+            Object userIdObj = jwt.getClaims().get("userId");
+            if (userIdObj == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Usuario no autenticado"));
+            }
+
+            Long userId = (userIdObj instanceof Number)
+                    ? ((Number) userIdObj).longValue()
+                    : Long.parseLong(userIdObj.toString());
+
+            log.info("Obteniendo todos los préstamos del usuario: {}", userId);
+
+            List<Loan> loans = loanRepository.findAll().stream()
+                    .filter(loan -> {
+                        if (loan.getLoanApplication() != null &&
+                                loan.getLoanApplication().getUser() != null) {
+                            return loan.getLoanApplication().getUser().getUserID().equals(userId);
+                        }
+                        return false;
+                    })
+                    .toList();
+
+            List<Map<String, Object>> loanDTOs = loans.stream()
+                    .map(loan -> {
+                        Map<String, Object> dto = new HashMap<>();
+                        dto.put("loanId", loan.getLoanId());
+                        dto.put("loanAmount", loan.getLoanAmount());
+                        dto.put("interestRate", loan.getInterestRate());
+                        dto.put("term", loan.getTerm());
+                        dto.put("totalInterest", loan.getTotalInterest());
+                        dto.put("totalAmount", loan.getTotalAmount());
+                        dto.put("balance", loan.getBalance());
+                        dto.put("status", loan.getStatus());
+                        dto.put("itemName", loan.getLoanApplication().getItem().getNameItem());
+                        dto.put("approvalDate", loan.getApprovalDate());
+                        dto.put("disbursementDate", loan.getContractGeneratedDate());
+                        return dto;
+                    })
+                    .toList();
+
+            return ResponseEntity.ok(loanDTOs);
+
+        } catch (Exception e) {
+            log.error("Error obteniendo todos los préstamos del usuario", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 }

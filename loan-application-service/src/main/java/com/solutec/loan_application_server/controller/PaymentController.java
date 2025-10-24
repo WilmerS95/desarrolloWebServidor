@@ -6,7 +6,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,17 +21,25 @@ public class PaymentController {
 
     private final PaymentService paymentService;
 
-    /**
-     * Cliente reporta un pago
-     * POST /api/payments/report
-     */
     @PostMapping("/report")
     public ResponseEntity<?> reportPayment(
             @RequestBody PaymentRequestDTO request,
-            Authentication authentication) {
+            @AuthenticationPrincipal Jwt jwt) {
         try {
-            log.info("Reportando pago para préstamo: {}", request.getLoanId());
+            Object userIdObj = jwt.getClaims().get("userId");
+            if (userIdObj == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Usuario no autenticado"));
+            }
+
+            Long userId = (userIdObj instanceof Number)
+                    ? ((Number) userIdObj).longValue()
+                    : Long.parseLong(userIdObj.toString());
+
+            log.info("Usuario {} reportando pago para préstamo: {}", userId, request.getLoanId());
+
             PaymentDTO payment = paymentService.reportPayment(request);
+
             return ResponseEntity.ok(Map.of(
                     "message", "Pago reportado exitosamente. Está en revisión.",
                     "payment", payment
@@ -42,19 +51,22 @@ public class PaymentController {
         }
     }
 
-    /**
-     * Administrador revisa un pago (aprobar/rechazar)
-     * PUT /api/payments/review
-     */
     @PutMapping("/review")
     public ResponseEntity<?> reviewPayment(
             @RequestBody PaymentReviewDTO reviewDTO,
-            Authentication authentication) {
+            @AuthenticationPrincipal Jwt jwt) {
         try {
-            // Obtener userID del admin desde el token JWT
-            Long adminUserId = getUserIdFromAuth(authentication);
+            Object userIdObj = jwt.getClaims().get("userId");
+            if (userIdObj == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Usuario no autenticado"));
+            }
 
-            log.info("Admin {} revisando pago {}", adminUserId, reviewDTO.getPaymentId());
+            Long adminUserId = (userIdObj instanceof Number)
+                    ? ((Number) userIdObj).longValue()
+                    : Long.parseLong(userIdObj.toString());
+
+            log.info("Usuario {} revisando pago {}", adminUserId, reviewDTO.getPaymentId());
 
             PaymentDTO payment = paymentService.reviewPayment(reviewDTO, adminUserId);
 
@@ -69,13 +81,11 @@ public class PaymentController {
         }
     }
 
-    /**
-     * Obtener pagos pendientes de revisión (para admin)
-     * GET /api/payments/pending
-     */
     @GetMapping("/pending")
-    public ResponseEntity<?> getPendingPayments() {
+    public ResponseEntity<?> getPendingPayments(@AuthenticationPrincipal Jwt jwt) {
         try {
+            log.info("Obteniendo pagos pendientes");
+
             List<PaymentDTO> payments = paymentService.getPendingPayments();
             return ResponseEntity.ok(payments);
         } catch (Exception e) {
@@ -85,13 +95,23 @@ public class PaymentController {
         }
     }
 
-    /**
-     * Obtener historial de pagos de un préstamo
-     * GET /api/payments/loan/{loanId}
-     */
     @GetMapping("/loan/{loanId}")
-    public ResponseEntity<?> getLoanPayments(@PathVariable Long loanId) {
+    public ResponseEntity<?> getLoanPayments(
+            @PathVariable Long loanId,
+            @AuthenticationPrincipal Jwt jwt) {
         try {
+            Object userIdObj = jwt.getClaims().get("userId");
+            if (userIdObj == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Usuario no autenticado"));
+            }
+
+            Long userId = (userIdObj instanceof Number)
+                    ? ((Number) userIdObj).longValue()
+                    : Long.parseLong(userIdObj.toString());
+
+            log.info("Usuario {} obteniendo pagos del préstamo {}", userId, loanId);
+
             List<PaymentDTO> payments = paymentService.getLoanPayments(loanId);
             return ResponseEntity.ok(payments);
         } catch (Exception e) {
@@ -101,10 +121,6 @@ public class PaymentController {
         }
     }
 
-    /**
-     * Obtener estado de cuenta completo de un préstamo
-     * GET /api/payments/statement/{loanId}
-     */
     @GetMapping("/statement/{loanId}")
     public ResponseEntity<?> getAccountStatement(@PathVariable Long loanId) {
         try {
@@ -115,19 +131,5 @@ public class PaymentController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", e.getMessage()));
         }
-    }
-
-    /**
-     * Helper para extraer userId del token JWT
-     */
-    private Long getUserIdFromAuth(Authentication authentication) {
-        // Implementar según tu configuración de JWT
-        // Por ejemplo, si usas OAuth2:
-        // Map<String, Object> attributes = ((OAuth2AuthenticationToken) authentication)
-        //         .getPrincipal().getAttributes();
-        // return Long.parseLong(attributes.get("userId").toString());
-
-        // Por ahora, retornamos un ID de ejemplo
-        return 1L; // CAMBIAR ESTO según tu implementación de JWT
     }
 }
