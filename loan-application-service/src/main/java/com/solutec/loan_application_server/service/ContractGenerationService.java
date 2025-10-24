@@ -182,7 +182,7 @@ public class ContractGenerationService {
             <strong>"EL ACREEDOR"</strong>; y por la otra parte:
         </p>
         <p>
-            <strong>%s %s %s</strong>, mayor de edad, con Documento Personal de Identificación (DPI), 
+            <strong>%s %s %s</strong>, mayor de edad,
             domiciliado en <strong>%s</strong>, correo electrónico <strong>%s</strong>, 
             quien en adelante se denominará <strong>"EL DEUDOR"</strong>.
         </p>
@@ -216,8 +216,12 @@ public class ContractGenerationService {
             </tr>
         </table>
         <p>
-            <strong>EL DEUDOR</strong> declara bajo juramento que el bien entregado en prenda es de su 
+            1. <strong>EL DEUDOR</strong> declara bajo juramento que el bien entregado en prenda es de su 
             legítima propiedad, está libre de gravámenes, y tiene plena facultad para constituir la presente garantía.
+        </p>
+        <p>
+            2. <strong>EL DEUDOR</strong> se compromete a realizar la entrega de la prenda 
+            a la oficina o sucursal mas cercana en un plazo máximo de 2 días.
         </p>
     </div>
 
