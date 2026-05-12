@@ -16,8 +16,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import com.solutec.loan_application_server.util.JwtUtil;
-import com.solutec.loan_application_server.dto.LoanDTO;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;

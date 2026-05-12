@@ -20,4 +20,8 @@ public interface PaymentScheduleRepository extends JpaRepository<PaymentSchedule
     List<PaymentSchedule> findOverduePayments(@Param("date") LocalDate date);
 
     List<PaymentSchedule> findByLoan_LoanIdAndPaymentNumber(Long loanId, Integer paymentNumber);
+
+    List<PaymentSchedule> findByLoan_LoanIdAndStatus(Long loanId, String status);
+
+    List<PaymentSchedule> findByStatusAndDueDateBefore(String status, LocalDate date);
 }

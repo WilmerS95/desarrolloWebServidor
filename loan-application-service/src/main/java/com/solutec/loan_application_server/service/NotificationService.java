@@ -21,9 +21,6 @@ public class NotificationService {
     private final EmailService emailService;
     private final UserRepository userRepository;
 
-    /**
-     * Notifica al cliente cuando reporta un pago
-     */
     public void notifyPaymentReported(User user, Payment payment) {
         String message = String.format(
                 "Tu reporte de pago #%d por Q%.2f ha sido recibido y está en revisión.",
@@ -44,9 +41,6 @@ public class NotificationService {
         }
     }
 
-    /**
-     * Notifica al cliente cuando su pago es revisado
-     */
     public void notifyPaymentReviewed(User user, Payment payment) {
         String status = "APROBADO".equals(payment.getStatus()) ? "aprobado" : "rechazado";
         String message = String.format(
@@ -72,9 +66,6 @@ public class NotificationService {
         }
     }
 
-    /**
-     * Notifica al cliente 1 día antes del vencimiento
-     */
     public void notifyPaymentDue(User user, PaymentSchedule schedule) {
         String message = String.format(
                 "Recordatorio: Tu pago #%d vence mañana (%s). Monto: Q%.2f",
@@ -96,11 +87,7 @@ public class NotificationService {
         }
     }
 
-    /**
-     * Notifica al cobrador sobre pagos vencidos
-     */
     public void notifyCollectorOverdue(PaymentSchedule schedule) {
-        // Buscar usuarios con rol COLLECTOR
         List<User> collectors = userRepository.findByRole_RoleName("COLLECTOR");
 
         if (collectors.isEmpty()) {

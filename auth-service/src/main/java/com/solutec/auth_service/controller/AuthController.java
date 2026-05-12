@@ -164,7 +164,6 @@ public class AuthController {
         """.formatted(resetLink);
     }
 
-
     @PostMapping("/reset-password")
     public ResponseEntity<ApiResponse> resetPassword(@RequestBody Map<String, String> request) {
         String token = request.get("token");
@@ -177,5 +176,9 @@ public class AuthController {
         } else {
             return ResponseEntity.badRequest().body(response);
         }
+    }
+    @GetMapping("/holamundo")
+    public String getholamundo() {
+        return "Prueba de KEITY";
     }
 }
