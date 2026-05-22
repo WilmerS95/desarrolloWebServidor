@@ -46,7 +46,7 @@ public class UserController {
     }
 
     private boolean isAdminRole(String role) {
-        return role != null && (role.equalsIgnoreCase("ADMIN") || role.equalsIgnoreCase("SA") || role.equalsIgnoreCase("SUPER_ADMIN"));
+        return role != null && (role.equalsIgnoreCase("ADMIN_LIGA") || role.equalsIgnoreCase("ADMIN") || role.equalsIgnoreCase("SA") || role.equalsIgnoreCase("SUPER_ADMIN"));
     }
 
     @GetMapping("/permissions")

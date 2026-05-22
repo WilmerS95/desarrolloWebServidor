@@ -48,13 +48,13 @@ INSERT INTO `AuditLog` VALUES (1,'CHANGE_PASSWORD','2025-10-22 22:28:44.299307',
 UNLOCK TABLES;
 
 --
--- Table structure for table `BusinessParameter`
+-- Table structure for table `TournamentParameter`
 --
 
-DROP TABLE IF EXISTS `BusinessParameter`;
+DROP TABLE IF EXISTS `TournamentParameter`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `BusinessParameter` (
+CREATE TABLE `TournamentParameter` (
   `parameterId` int NOT NULL AUTO_INCREMENT,
   `category` varchar(50) DEFAULT NULL,
   `changedBy` varchar(200) DEFAULT NULL,
@@ -75,12 +75,12 @@ CREATE TABLE `BusinessParameter` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `BusinessParameter`
+-- Dumping data for table `TournamentParameter`
 --
 
-LOCK TABLES `BusinessParameter` WRITE;
-/*!40000 ALTER TABLE `BusinessParameter` DISABLE KEYS */;
-/*!40000 ALTER TABLE `BusinessParameter` ENABLE KEYS */;
+LOCK TABLES `TournamentParameter` WRITE;
+/*!40000 ALTER TABLE `TournamentParameter` DISABLE KEYS */;
+/*!40000 ALTER TABLE `TournamentParameter` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --

@@ -6,48 +6,55 @@ frontend:
   url-decoder: http://localhost:9000
 
 spring:
+  application:
+    name: api-gateway
+
   security:
     oauth2:
       resourceserver:
         jwt:
           secret-key: ${JWT_SECRET}
-  application:
-    name: api-gateway
+
   cloud:
     gateway:
-      discovery:
-        locator:
-          enabled: true
-          lower-case-service-id: true
-      routes:
-        - id: auth-service
-          uri: http://localhost:9000
-          predicates:
-            - Path=/auth/**
-        - id: loan-application
-          uri: http://localhost:8083
-          predicates:
-            - Path=/loan-applications/**
-        - id: payment-service
-          uri: http://localhost:8083
-          predicates:
-            - Path=/api/payments/**
-        - id: user-service
-          uri: http://localhost:8082
-          predicates:
-            - Path=/admin/users/**
-        - id: business-parameter-service
-          uri: http://localhost:8084
-          predicates:
-            - Path=/business-parameters/**
-          filters:
-            - StripPrefix=1
+      server:
+        webflux:
+          discovery:
+            locator:
+              enabled: true
+              lower-case-service-id: true
+          routes:
+            - id: auth-service
+              uri: http://localhost:9000
+              predicates:
+                - Path=/auth/**
+            - id: user-service
+              uri: http://localhost:8082
+              predicates:
+                - Path=/admin/users/**
+            - id: competition-service
+              uri: http://localhost:8085
+              predicates:
+                - Path=/api/competitions/**
+            - id: finance-service
+              uri: http://localhost:8086
+              predicates:
+                - Path=/api/finances/**
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: auth-service
+        url: /auth/v3/api-docs
+      - name: user-service
+        url: /admin/users/v3/api-docs
+      - name: competition-service
+        url: /api/competitions/v3/api-docs
+      - name: finance-service
+        url: /api/finances/v3/api-docs
+
 eureka:
   client:
-    register-with-eureka: true
-    fetch-registry: true
     service-url:
       defaultZone: http://localhost:8761/eureka
-    instance:
-      lease-renewal-interval-in-seconds: 10
-      lease-expiration-duration-in-seconds: 30

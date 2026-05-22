@@ -34,6 +34,8 @@ public class GatewaySecurityConfig {
             .csrf(csrf -> csrf.disable())
             .authorizeExchange(exchanges -> exchanges
                     .pathMatchers("/auth/**").permitAll()
+                    .pathMatchers("/api/competitions/public/**").permitAll()
+                    .pathMatchers("/api/finances/public/**").permitAll()
                     .anyExchange().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtDecoder(reactiveJwtDecoder)))

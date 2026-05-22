@@ -164,6 +164,22 @@ public class AuthController {
         """.formatted(resetLink);
     }
 
+    @PostMapping("/register-sa")
+    public ResponseEntity<?> registerSA(@RequestBody RegisterRequest request) {
+        // Aquí podrías agregar validación de seguridad (ej: token de administrador)
+        if (userRepository.existsByUsername(request.getUsername())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("field", "username", "message", "El usuario ya existe"));
+        }
+        if (userRepository.existsByEmail(request.getEmail())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("field", "email", "message", "El correo ya está registrado"));
+        }
+
+        userService.registerSA(request);
+        return ResponseEntity.ok(Map.of("message", "Usuario SA creado correctamente"));
+    }
+
     @PostMapping("/reset-password")
     public ResponseEntity<ApiResponse> resetPassword(@RequestBody Map<String, String> request) {
         String token = request.get("token");

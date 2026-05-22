@@ -37,8 +37,8 @@
         <module>api-gateway</module>
         <module>auth-service</module>
         <module>user-service</module>
-        <module>loan-application-service</module>
-        <module>business-parameter-service</module>
+        <module>competition-service</module>
+        <module>finance-service</module>
     </modules>
     <dependencyManagement>
         <dependencies>

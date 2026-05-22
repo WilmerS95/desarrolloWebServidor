@@ -49,6 +49,10 @@ public class User {
     @JoinColumn(name = "roleID")
     private Role role;
 
+    private String dpiOrPassport;
+
+    private String photoUrl;
+
     /*@ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_roles",

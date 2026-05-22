@@ -18,4 +18,6 @@ public class UserDTO {
     private String address;
     private String roleName;
     private Set<String> permissions;
+    private String dpiOrPassport;
+    private String photoUrl;
 }

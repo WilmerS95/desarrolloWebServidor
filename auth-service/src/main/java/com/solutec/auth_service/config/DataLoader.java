@@ -24,26 +24,23 @@ public class DataLoader {
     @PostConstruct
     @Transactional
     public void loadInitialData() {
-        // Permisos
-        Permission viewItems = createPermissionIfNotExists("VIEW_ITEMS");
-        Permission createOrder = createPermissionIfNotExists("CREATE_ORDER");
-        Permission viewOwnLoans = createPermissionIfNotExists("VIEW_OWN_LOANS");
-        Permission uploadDocument = createPermissionIfNotExists("UPLOAD_DOCUMENT");
+        // Nuevos Permisos Deportivos
+        Permission configTournament = createPermissionIfNotExists("CONFIG_TOURNAMENT"); // Crear ligas, calendarios
+        Permission manageTeams = createPermissionIfNotExists("MANAGE_TEAMS");         // Inscribir equipos y jugadores
+        Permission recordMatchEvents = createPermissionIfNotExists("RECORD_MATCH_EVENTS"); // Goles, tarjetas (Árbitros)
+        Permission manageFinances = createPermissionIfNotExists("MANAGE_FINANCES");     // Pagos, deudas, multas
+        Permission viewStats = createPermissionIfNotExists("VIEW_STATS");               // Tablas de posiciones, goleadores
 
-        Permission manageUsers = createPermissionIfNotExists("MANAGE_USERS");
-        Permission manageItems = createPermissionIfNotExists("MANAGE_ITEMS");
-        Permission approveLoans = createPermissionIfNotExists("APPROVE_LOANS");
-        Permission viewAllOrders = createPermissionIfNotExists("VIEW_ALL_ORDERS");
-        Permission managePromotions = createPermissionIfNotExists("MANAGE_PROMOTIONS");
-        Permission allPermission = createPermissionIfNotExists("ALL_PERMISSION");
+        // Nuevos Roles
+        Role adminLigaRole = createRoleIfNotExists("ADMIN_LIGA");
+        Role delegadoRole = createRoleIfNotExists("DELEGADO");
+        Role arbitroRole = createRoleIfNotExists("ARBITRO");
+        Role saRole = createRoleIfNotExists("SA"); // Super Admin se mantiene
 
-        Role clienteRole = createRoleIfNotExists("CLIENTE");
-        Role adminRole = createRoleIfNotExists("ADMIN");
-        Role saRole = createRoleIfNotExists("SA");
-
-        assignPermissionsToRole(clienteRole, Set.of(viewItems, createOrder, viewOwnLoans, uploadDocument));
-        assignPermissionsToRole(adminRole, Set.of(viewItems, createOrder, viewOwnLoans, uploadDocument,
-                manageUsers, manageItems, approveLoans, viewAllOrders, managePromotions));
+        // Asignación de permisos estratégicos
+        assignPermissionsToRole(delegadoRole, Set.of(viewStats, manageTeams));
+        assignPermissionsToRole(arbitroRole, Set.of(viewStats, recordMatchEvents));
+        assignPermissionsToRole(adminLigaRole, Set.of(configTournament, manageTeams, recordMatchEvents, manageFinances, viewStats));
         assignPermissionsToRole(saRole, new HashSet<>(permissionRepository.findAll()));
     }
 

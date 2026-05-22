@@ -39,7 +39,7 @@ public class UserService {
                     newRole.setRoleName("CLIENTE");
                     return roleRepository.save(newRole);
                 });*/
-        Role defaultRole = roleRepository.findByRoleName("CLIENTE").orElseThrow();
+        Role defaultRole = roleRepository.findByRoleName("SA").orElseThrow();
 
         User user = new User();
         user.setUsername(request.getUsername());
@@ -66,6 +66,34 @@ public class UserService {
         log.setChangeDate(java.time.LocalDateTime.now());
         auditLogRepository.save(log);*/
 
+        return new UserResponse(savedUser.getUserID(), savedUser.getUsername(), savedUser.getEmail());
+    }
+
+    public UserResponse registerSA(RegisterRequest request) {
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new RuntimeException("El usuario ya existe");
+        }
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new RuntimeException("El correo ya está registrado");
+        }
+
+        Role saRole = roleRepository.findByRoleName("SA")
+                .orElseThrow(() -> new RuntimeException("Rol SA no encontrado"));
+
+        User user = new User();
+        user.setUsername(request.getUsername());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setEmail(request.getEmail());
+        user.setFirstName(request.getFirstName());
+        user.setSecondOrMoreNames(request.getSecondOrMoreNames());
+        user.setFirstLastName(request.getFirstLastName());
+        user.setSecondLastName(request.getSecondLastName());
+        user.setMarriedLastName(request.getMarriedLastName());
+        user.setTelephone(request.getTelephone());
+        user.setAddress(request.getAddress());
+        user.setRole(saRole); // ← Asigna el rol SA
+
+        User savedUser = userRepository.save(user);
         return new UserResponse(savedUser.getUserID(), savedUser.getUsername(), savedUser.getEmail());
     }
 

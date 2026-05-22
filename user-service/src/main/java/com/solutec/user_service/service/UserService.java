@@ -107,6 +107,8 @@ public class UserService {
         dto.setMarriedLastName(user.getMarriedLastName());
         dto.setTelephone(user.getTelephone());
         dto.setAddress(user.getAddress());
+        dto.setDpiOrPassport(user.getDpiOrPassport());
+        dto.setPhotoUrl(user.getPhotoUrl());
 
         if (user.getRole() != null) {
             dto.setRoleName(user.getRole().getRoleName());
