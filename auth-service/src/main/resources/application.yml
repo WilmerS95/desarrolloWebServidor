@@ -47,11 +47,3 @@ eureka:
     instance:
       lease-renewal-interval-in-seconds: 10
       lease-expiration-duration-in-seconds: 30
-
-springdoc:
-  api-docs:
-    enabled: true
-    path: /v3/api-docs
-  swagger-ui:
-    enabled: true
-    path: /swagger-ui.html
